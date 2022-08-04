@@ -1,0 +1,16 @@
+http:
+  BindAddress: ":8080"
+  Mode: release #(debug,release,test) set release to skip log
+db:
+  Host: localhost
+  Port: 4306
+  DBName: ks_setting_test
+  User: root
+  Password: 123456
+  ConnLifeTime: 300
+  ConnTimeOut: 30
+  MaxIdleConns: 10
+  MaxOpenConns: 80
+  LogLevel: 1
+common:
+  LogLevel: -1 #debug

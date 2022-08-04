@@ -1,0 +1,16 @@
+http:
+  BindAddress: ":8080"
+  Mode: debug #(debug,release,test)
+db:
+  Host: localhost
+  Port: 3306
+  DBName: ks_setting
+  User: root
+  Password: 123456
+  ConnLifeTime: 300
+  ConnTimeOut: 30
+  MaxIdleConns: 10
+  MaxOpenConns: 80
+  LogLevel: 1
+common:
+  LogLevel: -1 #debug
