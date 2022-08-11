@@ -1,7 +1,10 @@
 package logger
 
 import (
+	"strings"
+
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -52,4 +55,46 @@ func FromGinCtx(ctx *gin.Context) *zap.Logger {
 		return Logger
 	}
 	return logger.(*zap.Logger)
+}
+
+func BindLoggerToGinNormCtx(ctx *gin.Context, desc string) error {
+	descriptionField := zapcore.Field{
+		Key:    constants.CtxDescriptionKey,
+		Type:   zapcore.StringType,
+		String: desc,
+	}
+	logger := Logger.With(descriptionField)
+	ctx.Set(constants.CtxLoggerKey, logger)
+	return nil
+}
+
+func BindLoggerToGinReqCtx(c *gin.Context) error {
+	requestIDField := zapcore.Field{
+		Key:    constants.CtxRequestIDKey,
+		Type:   zapcore.StringType,
+		String: uuid.New().String(),
+	}
+
+	builder := strings.Builder{}
+	builder.WriteString(c.Request.Method)
+	builder.WriteString(" ")
+	builder.WriteString(c.Request.URL.Path)
+	raw := c.Request.URL.RawQuery
+	if raw != "" {
+		builder.WriteString("?")
+		builder.WriteString(raw)
+	}
+	apiField := zapcore.Field{
+		Key:    constants.CtxAPIRequestKey,
+		Type:   zapcore.StringType,
+		String: builder.String(),
+	}
+
+	logger := Logger.
+		With(requestIDField).
+		With(apiField)
+
+	c.Set(constants.CtxLoggerKey, logger)
+
+	return nil
 }

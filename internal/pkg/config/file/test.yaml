@@ -14,3 +14,6 @@ db:
   LogLevel: 1
 common:
   LogLevel: -1 #debug
+telebot:
+  Token: ""
+  GroupID:

@@ -13,10 +13,11 @@ import (
 
 //config contains all global config of application
 type config struct {
-	Env    string
-	Common CommonConfig
-	DB     DBConfig
-	Http   HttpConfig
+	Env     string
+	Common  CommonConfig
+	DB      DBConfig
+	Http    HttpConfig
+	Telebot TelebotConfig
 }
 
 var cfg *config
@@ -25,9 +26,10 @@ var cfg *config
 func Instance() *config {
 	if cfg == nil {
 		cfg = &config{
-			Common: CommonConfig{},
-			DB:     DBConfig{},
-			Http:   HttpConfig{},
+			Common:  CommonConfig{},
+			DB:      DBConfig{},
+			Http:    HttpConfig{},
+			Telebot: TelebotConfig{},
 		}
 	}
 	return cfg
