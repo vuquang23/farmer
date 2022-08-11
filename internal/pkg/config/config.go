@@ -18,6 +18,7 @@ type config struct {
 	DB      DBConfig
 	Http    HttpConfig
 	Telebot TelebotConfig
+	Binance BinanceConfig
 }
 
 var cfg *config
@@ -30,6 +31,7 @@ func Instance() *config {
 			DB:      DBConfig{},
 			Http:    HttpConfig{},
 			Telebot: TelebotConfig{},
+			Binance: BinanceConfig{},
 		}
 	}
 	return cfg

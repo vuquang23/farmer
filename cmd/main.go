@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
+	"farmer/internal/pkg/builder"
 	"farmer/internal/pkg/components"
 	"farmer/internal/pkg/config"
 	"farmer/internal/pkg/telebot"
@@ -21,6 +22,7 @@ func main() {
 	}
 	app.Commands = append(app.Commands, telebotCommand())
 	app.Commands = append(app.Commands, migrationCommand())
+	app.Commands = append(app.Commands, updateSymbolListCommand())
 
 	app.Run(os.Args)
 }
@@ -98,6 +100,32 @@ func migrationCommand() *cli.Command {
 			// } else {
 			// 	return m.MigrateDown(down)
 			// }
+			return nil
+		},
+	}
+}
+
+func updateSymbolListCommand() *cli.Command {
+	cfgFile := "internal/pkg/config/file/default.yaml"
+	return &cli.Command{
+		Name:  "symlist",
+		Usage: "Update USDT symbol list on Binance",
+		Action: func(ctx *cli.Context) error {
+			err := config.Load(cfgFile)
+			if err != nil {
+				return errors.New("can not read config file")
+			}
+
+			components.InitSymlistUpdaterComponents()
+
+			updater := builder.NewSymlistUpdater()
+
+			updaterCtx := new(gin.Context)
+			logger.BindLoggerToGinNormCtx(updaterCtx, "Symlist updater")
+
+			if err := updater.Run(updaterCtx, "files/symbol.txt"); err != nil {
+				logger.FromGinCtx(updaterCtx).Error(err.Error())
+			}
 			return nil
 		},
 	}

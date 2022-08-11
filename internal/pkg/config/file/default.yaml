@@ -4,7 +4,7 @@ http:
 db:
   Host: localhost
   Port: 3306
-  DBName: ks_setting
+  DBName: farmer
   User: root
   Password: 123456
   ConnLifeTime: 300
@@ -17,3 +17,6 @@ common:
 telebot:
   Token: "5391392501:AAF66073DXJ1hyrsjnxFW5Q0zgN8lGKOJqE"
   GroupID:
+binance:
+  ApiKey:
+  SecretKey:

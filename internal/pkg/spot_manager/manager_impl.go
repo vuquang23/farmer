@@ -1,9 +1,9 @@
 package spotmanager
 
-import sb "farmer/internal/pkg/spot_binance"
+import sw "farmer/internal/pkg/spot_worker"
 
 type SpotManager struct {
-	mapSymbolWorker map[string]*sb.SpotWorker
+	mapSymbolWorker map[string]sw.ISpotWorker
 }
 
 var spotManager *SpotManager
