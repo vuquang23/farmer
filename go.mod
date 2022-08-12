@@ -17,6 +17,7 @@ require (
 require (
 	github.com/adshao/go-binance/v2 v2.3.8 // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
+	github.com/cinar/indicator v1.2.24 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect

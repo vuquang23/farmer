@@ -2,11 +2,12 @@ package builder
 
 import (
 	"context"
-	"farmer/internal/pkg/binance"
-	"farmer/internal/pkg/utils/logger"
 	"os"
 
 	"github.com/gin-gonic/gin"
+
+	"farmer/internal/pkg/binance"
+	"farmer/internal/pkg/utils/logger"
 )
 
 type ISymlistUpdater interface {

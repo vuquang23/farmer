@@ -1,9 +1,9 @@
 package binance
 
 import (
-	"farmer/internal/pkg/config"
-
 	"github.com/adshao/go-binance/v2"
+
+	"farmer/internal/pkg/config"
 )
 
 var client *binance.Client

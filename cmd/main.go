@@ -11,6 +11,7 @@ import (
 	"farmer/internal/pkg/builder"
 	"farmer/internal/pkg/components"
 	"farmer/internal/pkg/config"
+	"farmer/internal/pkg/services"
 	"farmer/internal/pkg/telebot"
 	"farmer/internal/pkg/utils/logger"
 )
@@ -23,6 +24,7 @@ func main() {
 	app.Commands = append(app.Commands, telebotCommand())
 	app.Commands = append(app.Commands, migrationCommand())
 	app.Commands = append(app.Commands, updateSymbolListCommand())
+	app.Commands = append(app.Commands, calcWavetrendMomentumCommand())
 
 	app.Run(os.Args)
 }
@@ -125,6 +127,54 @@ func updateSymbolListCommand() *cli.Command {
 
 			if err := updater.Run(updaterCtx, "files/symbol.txt"); err != nil {
 				logger.FromGinCtx(updaterCtx).Error(err.Error())
+				return nil
+			}
+			return nil
+		},
+	}
+}
+
+func calcWavetrendMomentumCommand() *cli.Command {
+	cfgFile := "internal/pkg/config/file/default.yaml"
+	symlistFile := "files/symbol.txt"
+	resultFile := "files/momentum_out.txt"
+
+	symlistFlag := "symlist"
+	intervalFlag := "interval"
+
+	return &cli.Command{
+		Name:  "wtmomentum",
+		Usage: "Calculate wavetrend momentum value from a symbol list",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  symlistFlag,
+				Value: symlistFile,
+			},
+			&cli.StringFlag{
+				Name:  intervalFlag,
+				Value: "4h",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			err := config.Load(cfgFile)
+			if err != nil {
+				return err
+			}
+
+			components.InitWavetrendCalculatorComponents()
+
+			calculator := builder.NewWaveTrendCalculator(
+				services.WaveTrendMomentumServiceInstance(),
+			)
+			calculatorCtx := new(gin.Context)
+			logger.BindLoggerToGinNormCtx(calculatorCtx, "Wavetrend calculator")
+
+			err = calculator.Run(
+				calculatorCtx, ctx.String(intervalFlag), ctx.String(symlistFlag), resultFile,
+			)
+			if err != nil {
+				logger.FromGinCtx(calculatorCtx).Error(err.Error())
+				return nil
 			}
 			return nil
 		},
