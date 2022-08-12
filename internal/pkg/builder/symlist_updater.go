@@ -36,6 +36,15 @@ func (updater *symlistUpdater) Run(ctx *gin.Context, filePath string) error {
 	}
 
 	for _, coin := range res {
+		// check whether pair coin-usdt is existed
+		_, err := binance.BinanceClientInstance().
+			NewKlinesService().Symbol(coin.Coin + "USDT").
+			Interval("1d").Limit(1).
+			Do(context.Background())
+		if err != nil {
+			logger.FromGinCtx(ctx).Error(err.Error())
+			continue
+		}
 		fo.Write([]byte(coin.Coin + "\n"))
 	}
 

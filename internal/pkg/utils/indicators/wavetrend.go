@@ -1,7 +1,6 @@
 package indicators
 
 import (
-	"errors"
 	"math"
 	"strconv"
 
@@ -12,28 +11,24 @@ import (
 )
 
 func WaveTrendMomentumValue(candles []*e.MinimalKline, n1, n2 uint64) (float64, error) {
-	// i - n2 + 1 - n1 + 1 - n1 + 1
-	intervalLen := -(-n2 + 1 - n1 + 1 - n1 + 1) + 1
-	if len(candles) < int(intervalLen) {
-		return 0, errors.New("candles len is too short")
-	}
-
 	ap := Hlc3(candles)
 	esa := indicator.Ema(int(n1), ap)
-	ap = ap[(n1 - 1):]
-	esa = esa[(n1 - 1):]
+
+	// ap[0] = esa[0]
+	ap = ap[1:]
+	esa = esa[1:]
 
 	abs := []float64{}
 	for i := 0; i < len(esa); i++ {
 		abs = append(abs, math.Abs(ap[i]-esa[i]))
 	}
+
 	d := indicator.Ema(int(n1), abs)
 
 	ci := []float64{}
 	for i := 0; i < len(d); i++ {
 		ci = append(ci, (ap[i]-esa[i])/(0.015*d[i]))
 	}
-	ci = ci[(n1 - 1):]
 
 	tci := indicator.Ema(int(n2), ci)
 	return tci[len(tci)-1], nil

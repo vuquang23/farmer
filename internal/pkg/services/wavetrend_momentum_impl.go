@@ -56,7 +56,7 @@ func (s *wtMomentumService) Calculate(ctx *gin.Context, symbolList []string, int
 		}
 
 		wg.Wait()
-		time.Sleep(time.Second)
+		time.Sleep(time.Second * time.Duration(2)) // sleep 2s
 	}
 
 	for _, sym := range symbolList {
@@ -81,11 +81,11 @@ func (s *wtMomentumService) setMap(symbol string, value float64) {
 func (s *wtMomentumService) calcForSymbol(ctx *gin.Context, wg *sync.WaitGroup, symbol string, interval string) {
 	defer wg.Done()
 
-	limit := -(-s.n2 + 1 - s.n1 + 1 - s.n1 + 1) + 1
+	pass := uint64(600) // 600 candles til now
 	candles, err := s.binance.NewKlinesService().
 		Symbol(symbol + "USDT").
 		Interval(interval).
-		Limit(int(limit)).
+		Limit(int(pass)).
 		Do(context.Background())
 	if err != nil {
 		logger.FromGinCtx(ctx).Sugar().Error(
