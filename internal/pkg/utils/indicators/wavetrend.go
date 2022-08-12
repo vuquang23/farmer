@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2/futures"
 	"github.com/cinar/indicator"
 
 	e "farmer/internal/pkg/entities"
@@ -43,7 +44,24 @@ func Hlc3(candles []*e.MinimalKline) []float64 {
 	return ret
 }
 
-func BinanceKlineToMinimalKline(candles []*binance.Kline) []*e.MinimalKline {
+func SpotKlineToMinimalKline(candles []*binance.Kline) []*e.MinimalKline {
+	ret := []*e.MinimalKline{}
+	for _, c := range candles {
+		high, _ := strconv.ParseFloat(c.High, 64)
+		low, _ := strconv.ParseFloat(c.Low, 64)
+		close, _ := strconv.ParseFloat(c.Close, 64)
+		openTime := uint64(c.OpenTime)
+		ret = append(ret, &e.MinimalKline{
+			OpenTime: openTime,
+			High:     high,
+			Low:      low,
+			Close:    close,
+		})
+	}
+	return ret
+}
+
+func FutureKlineToMinimalKline(candles []*futures.Kline) []*e.MinimalKline {
 	ret := []*e.MinimalKline{}
 	for _, c := range candles {
 		high, _ := strconv.ParseFloat(c.High, 64)

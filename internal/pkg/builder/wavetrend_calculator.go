@@ -8,12 +8,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"farmer/internal/pkg/enum"
 	"farmer/internal/pkg/services"
 	"farmer/internal/pkg/utils/logger"
 )
 
 type IWaveTrendCalculator interface {
-	Run(ctx *gin.Context, interval string, symlistFilePath string, resultFilePath string) error
+	Run(ctx *gin.Context, market enum.Market, interval string, symlistFilePath string, resultFilePath string) error
 }
 
 type waveTrendCalculator struct {
@@ -26,7 +27,9 @@ func NewWaveTrendCalculator(wtMomentumSvc services.IWavetrendMomentumService) IW
 	}
 }
 
-func (w *waveTrendCalculator) Run(ctx *gin.Context, interval string, symlistFilePath string, resultFilePath string) error {
+func (w *waveTrendCalculator) Run(
+	ctx *gin.Context, market enum.Market, interval string, symlistFilePath string, resultFilePath string,
+) error {
 	fi, err := os.Open(symlistFilePath)
 	if err != nil {
 		return err
@@ -40,7 +43,7 @@ func (w *waveTrendCalculator) Run(ctx *gin.Context, interval string, symlistFile
 		symbolList = append(symbolList, symbol)
 	}
 
-	ret, svcErr := w.wtMomentumSvc.Calculate(ctx, symbolList, interval)
+	ret, svcErr := w.wtMomentumSvc.Calculate(ctx, market, symbolList, interval)
 	if svcErr != nil {
 		return svcErr
 	}

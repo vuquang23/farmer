@@ -11,6 +11,7 @@ import (
 	"farmer/internal/pkg/builder"
 	"farmer/internal/pkg/components"
 	"farmer/internal/pkg/config"
+	"farmer/internal/pkg/enum"
 	"farmer/internal/pkg/services"
 	"farmer/internal/pkg/telebot"
 	"farmer/internal/pkg/utils/logger"
@@ -141,6 +142,7 @@ func calcWavetrendMomentumCommand() *cli.Command {
 
 	symlistFlag := "symlist"
 	intervalFlag := "interval"
+	marketFlag := "market"
 
 	return &cli.Command{
 		Name:  "wtmomentum",
@@ -153,6 +155,10 @@ func calcWavetrendMomentumCommand() *cli.Command {
 			&cli.StringFlag{
 				Name:  intervalFlag,
 				Value: "4h",
+			},
+			&cli.StringFlag{
+				Name:  marketFlag,
+				Value: string(enum.Future),
 			},
 		},
 		Action: func(ctx *cli.Context) error {
@@ -170,7 +176,8 @@ func calcWavetrendMomentumCommand() *cli.Command {
 			logger.BindLoggerToGinNormCtx(calculatorCtx, "Wavetrend calculator")
 
 			err = calculator.Run(
-				calculatorCtx, ctx.String(intervalFlag), ctx.String(symlistFlag), resultFile,
+				calculatorCtx, enum.Market(ctx.String(marketFlag)),
+				ctx.String(intervalFlag), ctx.String(symlistFlag), resultFile,
 			)
 			if err != nil {
 				logger.FromGinCtx(calculatorCtx).Error(err.Error())

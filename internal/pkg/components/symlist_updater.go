@@ -8,5 +8,5 @@ import (
 func InitSymlistUpdaterComponents() {
 	logger.InitLogger()
 
-	binance.InitBinanceClient()
+	binance.InitBinanceSpotClient()
 }

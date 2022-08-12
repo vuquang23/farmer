@@ -29,7 +29,7 @@ func (updater *symlistUpdater) Run(ctx *gin.Context, filePath string) error {
 	}
 	defer fo.Close()
 
-	res, err := binance.BinanceClientInstance().
+	res, err := binance.BinanceSpotClientInstance().
 		NewGetAllCoinsInfoService().Do(context.Background())
 	if err != nil {
 		return err
@@ -37,7 +37,7 @@ func (updater *symlistUpdater) Run(ctx *gin.Context, filePath string) error {
 
 	for _, coin := range res {
 		// check whether pair coin-usdt is existed
-		_, err := binance.BinanceClientInstance().
+		_, err := binance.BinanceSpotClientInstance().
 			NewKlinesService().Symbol(coin.Coin + "USDT").
 			Interval("1d").Limit(1).
 			Do(context.Background())

@@ -2,19 +2,33 @@ package binance
 
 import (
 	"github.com/adshao/go-binance/v2"
+	"github.com/adshao/go-binance/v2/futures"
 
 	"farmer/internal/pkg/config"
 )
 
-var client *binance.Client
+var spot *binance.Client
 
-func InitBinanceClient() {
-	if client == nil {
+func InitBinanceSpotClient() {
+	if spot == nil {
 		cfg := config.Instance().Binance
-		client = binance.NewClient(cfg.ApiKey, cfg.SecretKey)
+		spot = binance.NewClient(cfg.ApiKey, cfg.SecretKey)
 	}
 }
 
-func BinanceClientInstance() *binance.Client {
-	return client
+func BinanceSpotClientInstance() *binance.Client {
+	return spot
+}
+
+var future *futures.Client
+
+func InitBinanceFutureClient() {
+	if future == nil {
+		cfg := config.Instance().Binance
+		future = binance.NewFuturesClient(cfg.ApiKey, cfg.SecretKey)
+	}
+}
+
+func BinanceFutureClientInstance() *futures.Client {
+	return future
 }
