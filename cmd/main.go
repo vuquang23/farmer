@@ -12,6 +12,7 @@ import (
 	"farmer/internal/pkg/components"
 	"farmer/internal/pkg/config"
 	"farmer/internal/pkg/enum"
+	"farmer/internal/pkg/migrations"
 	"farmer/internal/pkg/services"
 	"farmer/internal/pkg/telebot"
 	"farmer/internal/pkg/utils/logger"
@@ -57,7 +58,7 @@ func telebotCommand() *cli.Command {
 
 func migrationCommand() *cli.Command {
 	cfgFile := "internal/pkg/config/file/default.yaml"
-	// defaultMigrationDir := "file://./migrations/mysql"
+	defaultMigrationDir := "file://./migrations/mysql"
 	flagUp := "up"
 	flagDown := "down"
 
@@ -93,17 +94,16 @@ func migrationCommand() *cli.Command {
 				return errors.New("[ERROR] Both up and down migration declared. Stop the migration")
 			}
 
-			// m, err := migrations.NewMigration(defaultMigrationDir)
-			// if err != nil {
-			// 	fmt.Println("Can not create migration " + err.Error())
-			// }
+			m, err := migrations.NewMigration(defaultMigrationDir)
+			if err != nil {
+				fmt.Println("Can not create migration " + err.Error())
+			}
 
-			// if up != -1 {
-			// 	return m.MigrateUp(up)
-			// } else {
-			// 	return m.MigrateDown(down)
-			// }
-			return nil
+			if up != -1 {
+				return m.MigrateUp(up)
+			} else {
+				return m.MigrateDown(down)
+			}
 		},
 	}
 }
