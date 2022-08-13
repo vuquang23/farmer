@@ -3,7 +3,7 @@ http:
   Mode: debug #(debug,release,test)
 db:
   Host: localhost
-  Port: 3306
+  Port: 3406
   DBName: farmer
   User: root
   Password: 123456

@@ -1,0 +1,19 @@
+version: "3.7"
+
+networks:
+  farmer-app:
+    driver: bridge
+
+services:
+  mysql:
+    container_name: farmer-mysql
+    image: 'bitnami/mysql:latest'
+    volumes:
+      - ./volumes/mysql/data:/bitnami/mysql/data
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=farmer
+    networks:
+      - farmer-app
+    ports:
+      - "3406:3306"
