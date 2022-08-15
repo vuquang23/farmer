@@ -9,8 +9,11 @@ import (
 
 var spot *binance.Client
 
-func InitBinanceSpotClient() {
+func InitBinanceSpotClient(isTest bool) {
 	if spot == nil {
+		if isTest {
+			binance.UseTestnet = true
+		}
 		cfg := config.Instance().Binance
 		spot = binance.NewClient(cfg.ApiKey, cfg.SecretKey)
 	}

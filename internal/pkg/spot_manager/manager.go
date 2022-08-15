@@ -1,3 +1,5 @@
 package spotmanager
 
-type ISpotManager interface{}
+type ISpotManager interface{
+	Run() error
+}

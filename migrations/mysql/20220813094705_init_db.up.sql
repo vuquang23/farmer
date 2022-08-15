@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS `spot_trading_pairs` (
 
 CREATE TABLE IF NOT EXISTS `spot_trades` (
     id INT PRIMARY KEY AUTO_INCREMENT,
+    binance_order_id INT NOT NULL,
     spot_trading_pair_id INT NOT NULL,
     open_qty FLOAT NOT NULL,
     open_price FLOAT NOT NULL,

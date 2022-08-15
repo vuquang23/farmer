@@ -1,3 +1,7 @@
-package spotbinance
+package spotworker
 
-type ISpotWorker interface{}
+import "farmer/internal/pkg/entities"
+
+type ISpotWorker interface {
+	SetExchangeInfo(info entities.ExchangeInfo)
+}

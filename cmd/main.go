@@ -14,6 +14,7 @@ import (
 	"farmer/internal/pkg/enum"
 	"farmer/internal/pkg/migrations"
 	"farmer/internal/pkg/services"
+	spotmanager "farmer/internal/pkg/spot_manager"
 	"farmer/internal/pkg/telebot"
 	"farmer/internal/pkg/utils/logger"
 )
@@ -23,7 +24,7 @@ func main() {
 		Name:     "My Farmer",
 		Commands: []*cli.Command{},
 	}
-	app.Commands = append(app.Commands, telebotCommand())
+	app.Commands = append(app.Commands, spotFarmerCommand())
 	app.Commands = append(app.Commands, migrationCommand())
 	app.Commands = append(app.Commands, updateSymbolListCommand())
 	app.Commands = append(app.Commands, calcWavetrendMomentumCommand())
@@ -31,27 +32,35 @@ func main() {
 	app.Run(os.Args)
 }
 
-func telebotCommand() *cli.Command {
+func spotFarmerCommand() *cli.Command {
 	cfgFile := "internal/pkg/config/file/default.yaml"
+	testFlag := "test"
 
 	return &cli.Command{
-		Name:  "telebot",
-		Usage: "Run telebot",
+		Name:  "sfarmer",
+		Usage: "Run spot farmer system",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  testFlag,
+				Value: true,
+			},
+		},
 		Action: func(ctx *cli.Context) error {
+			isTest := ctx.Bool(testFlag)
+			fmt.Printf("Run spot farmer with test mode: %t", isTest)
+
 			if err := config.Load(cfgFile); err != nil {
-				return errors.New("[telegram bot] can not load config")
+				return errors.New("Can not load config")
 			}
-			components.InitTeleBotComponents()
-			botCtx := new(gin.Context)
-			logger.BindLoggerToGinNormCtx(botCtx, "telegram-bot")
-			if err := telebot.InitTeleBot(
-				botCtx,
-				config.Instance().Telebot.Token, int64(config.Instance().Telebot.GroupID),
-			); err != nil {
-				return errors.New("[telegram bot] can not init bot")
+
+			components.InitSpotFarmerComponents(isTest)
+
+			farmer, err := builder.NewSpotFarmerSystem(spotmanager.SpotManagerInstance(), telebot.TeleBotInstance())
+			if err != nil {
+				return err
 			}
-			telebot.TeleBotInstance().Run()
-			return nil
+
+			return farmer.Run()
 		},
 	}
 }
@@ -86,8 +95,7 @@ func migrationCommand() *cli.Command {
 			down := c.Int(flagDown)
 
 			if up == -1 && down == -1 {
-				fmt.Println("No up or down migration declared")
-				return nil
+				return errors.New("No up or down migration declared")
 			}
 
 			if up != -1 && down != -1 {
@@ -96,7 +104,7 @@ func migrationCommand() *cli.Command {
 
 			m, err := migrations.NewMigration(defaultMigrationDir)
 			if err != nil {
-				fmt.Println("Can not create migration " + err.Error())
+				return err
 			}
 
 			if up != -1 {
@@ -127,8 +135,7 @@ func updateSymbolListCommand() *cli.Command {
 			logger.BindLoggerToGinNormCtx(updaterCtx, "Symlist updater")
 
 			if err := updater.Run(updaterCtx, "files/symbol.txt"); err != nil {
-				logger.FromGinCtx(updaterCtx).Error(err.Error())
-				return nil
+				return err
 			}
 			return nil
 		},
@@ -180,8 +187,7 @@ func calcWavetrendMomentumCommand() *cli.Command {
 				ctx.String(intervalFlag), ctx.String(symlistFlag), resultFile,
 			)
 			if err != nil {
-				logger.FromGinCtx(calculatorCtx).Error(err.Error())
-				return nil
+				return err
 			}
 			return nil
 		},
