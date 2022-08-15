@@ -1,19 +1,33 @@
 package spotmanager
 
-import sw "farmer/internal/pkg/spot_worker"
+import (
+	sw "farmer/internal/pkg/spot_worker"
 
-type SpotManager struct {
-	mapSymbolWorker map[string]sw.ISpotWorker
+	"github.com/adshao/go-binance/v2"
+)
+
+type spotManager struct {
+	bclient         *binance.Client
+	mapSymbolWorker map[string]sw.ISpotWorker // eg for symbol: BTCUSDT, ETHUSDT...
 }
 
-var spotManager *SpotManager
+var manager *spotManager
 
-func InitSpotManager() {
-	if spotManager == nil {
-		spotManager = &SpotManager{}
+func InitSpotManager(bclient *binance.Client) {
+	if manager == nil {
+		manager = &spotManager{
+			bclient:         bclient,
+			mapSymbolWorker: make(map[string]sw.ISpotWorker),
+		}
 	}
 }
 
 func SpotManagerInstance() ISpotManager {
-	return spotManager
+	return manager
+}
+
+func (m *spotManager) Run() error {
+	go m.updateExchangeInfoPeriodically()
+
+	return nil
 }

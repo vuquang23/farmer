@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,10 @@ import (
 var Logger *zap.Logger
 
 func InitLogger() error {
+	if Logger != nil {
+		return errors.New("logger is already init")
+	}
+
 	commonCfg := config.Instance().Common
 	cfg := zap.Config{
 		Level:       zap.NewAtomicLevelAt(zapcore.Level(commonCfg.LogLevel)),
@@ -55,6 +60,16 @@ func FromGinCtx(ctx *gin.Context) *zap.Logger {
 		return Logger
 	}
 	return logger.(*zap.Logger)
+}
+
+func WithDescription(desc string) *zap.Logger {
+	descriptionField := zapcore.Field{
+		Key:    constants.CtxDescriptionKey,
+		Type:   zapcore.StringType,
+		String: desc,
+	}
+	logger := Logger.With(descriptionField)
+	return logger
 }
 
 func BindLoggerToGinNormCtx(ctx *gin.Context, desc string) error {

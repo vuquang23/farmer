@@ -9,7 +9,7 @@ import (
 func InitWavetrendCalculatorComponents() {
 	logger.InitLogger()
 
-	binance.InitBinanceSpotClient()
+	binance.InitBinanceSpotClient(false)
 	binance.InitBinanceFutureClient()
 
 	services.InitWaveTrendMomentumService(

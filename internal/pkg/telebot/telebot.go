@@ -5,26 +5,30 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	tb "gopkg.in/telebot.v3"
 )
 
+type ITeleBot interface {
+	Run()
+	SendMsg(msg interface{})
+	SendMsgWithFormat(template string, params ...interface{})
+}
+
 // TeleBot ...
-type TeleBot struct {
-	ctx   *gin.Context
+type teleBot struct {
 	bot   *tb.Bot
 	group *tb.Chat
 }
 
-var telebot *TeleBot
+var tlbot *teleBot
 
-func TeleBotInstance() *TeleBot {
-	return telebot
+func TeleBotInstance() ITeleBot {
+	return tlbot
 }
 
-func InitTeleBot(ctx *gin.Context, token string, groupID int64) error {
-	if telebot != nil {
+func InitTeleBot(token string, groupID int64) error {
+	if tlbot != nil {
 		return nil
 	}
 	bot, err := tb.NewBot(tb.Settings{
@@ -34,8 +38,7 @@ func InitTeleBot(ctx *gin.Context, token string, groupID int64) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create bot")
 	}
-	telebot = &TeleBot{
-		ctx: ctx,
+	tlbot = &teleBot{
 		bot: bot,
 		group: &tb.Chat{
 			ID:   groupID,
@@ -43,25 +46,24 @@ func InitTeleBot(ctx *gin.Context, token string, groupID int64) error {
 		},
 	}
 
-	setupRoute(telebot)
+	setupRoute(tlbot)
 
 	return nil
 }
 
 // Run run bot
-func (ltb *TeleBot) Run() {
-	logger.FromGinCtx(ltb.ctx).Info("start telebot")
+func (ltb *teleBot) Run() {
 	ltb.bot.Start()
 }
 
 // SendMsg sending a message to master
-func (ltb *TeleBot) SendMsg(msg interface{}) {
-	l := logger.FromGinCtx(ltb.ctx)
+func (ltb *teleBot) SendMsg(msg interface{}) {
+	log := logger.WithDescription("Send message telegram")
 
 	for i := 0; i < 3; i++ {
 		_, err := ltb.bot.Send(ltb.group, msg)
 		if err != nil {
-			l.Sugar().Info("failed to send message tele - ", "attempt", i, " - err", err)
+			log.Sugar().Info("failed to send message tele - ", "attempt", i, " - err", err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -70,6 +72,6 @@ func (ltb *TeleBot) SendMsg(msg interface{}) {
 }
 
 // SendMsgWithFormat sending a message with format to master
-func (ltb *TeleBot) SendMsgWithFormat(template string, params ...interface{}) {
+func (ltb *teleBot) SendMsgWithFormat(template string, params ...interface{}) {
 	ltb.SendMsg(fmt.Sprintf(template, params...))
 }

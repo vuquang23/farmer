@@ -8,8 +8,8 @@ import (
 	tb "gopkg.in/telebot.v3"
 )
 
-func setupRoute(telebot *TeleBot) {
-	log := logger.FromGinCtx(telebot.ctx)
+func setupRoute(telebot *teleBot) {
+	log := logger.WithDescription("Telegram bot controller")
 
 	telebot.bot.Handle(tb.OnText, func(ctx tb.Context) error {
 		args := strings.Fields(ctx.Text())
@@ -23,6 +23,7 @@ func setupRoute(telebot *TeleBot) {
 				return nil
 			}
 			getSpotAccountInfo(ctx, dto)
+
 		case "post!/spot/bot": // create bot that will trade a SYMBOL
 			req := &CreateSpotBotRequest{}
 			if err := json.Unmarshal([]byte(args[1]), req); err != nil {
@@ -32,6 +33,7 @@ func setupRoute(telebot *TeleBot) {
 				return nil
 			}
 			createSpotBot(ctx, req)
+
 		case "delete!/spot/bot": // stop a bot that is trading a SYMBOL
 			req := &StopBotBotRequest{}
 			if err := json.Unmarshal([]byte(args[1]), req); err != nil {
@@ -41,6 +43,7 @@ func setupRoute(telebot *TeleBot) {
 				return nil
 			}
 			stopSpotBot(ctx, req)
+
 		default:
 			msg := "not match any route"
 			log.Error(msg)
