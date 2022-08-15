@@ -1,5 +1,5 @@
 package spotmanager
 
-type ISpotManager interface{
-	Run() error
+type ISpotManager interface {
+	Run(startC chan<- error)
 }

@@ -42,7 +42,13 @@ func NewSpotFarmerSystem(m spotmanager.ISpotManager, t telebot.ITeleBot) (ISpotF
 }
 
 func (sys *spotFarmerSystem) Run() error {
-	go sys.m.Run()
+	startC := make(chan error)
+	go sys.m.Run(startC)
+	err := <-startC
+	if err != nil {
+		return err
+	}
+
 	go sys.t.Run()
 
 	fmt.Println(cfg.Instance().Http.BindAddress)

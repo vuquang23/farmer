@@ -6,19 +6,32 @@ import (
 )
 
 type spotWorker struct {
-	symbol      string
 	exchangeInf *exchangeInfo
+	setting     *workerSetting
 }
 
-func NewSpotWorker(symbol string) ISpotWorker {
+func NewSpotWorker() ISpotWorker {
 	return &spotWorker{
-		symbol: symbol,
 		exchangeInf: &exchangeInfo{
+			mu: &sync.Mutex{},
+		},
+		setting: &workerSetting{
 			mu: &sync.Mutex{},
 		},
 	}
 }
 
-func (w *spotWorker) SetExchangeInfo(info entities.ExchangeInfo) {
+func (w *spotWorker) SetExchangeInfo(info entities.ExchangeInfo) error {
 	w.exchangeInf.set(info)
+	return nil
+}
+
+func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorker) error {
+	w.setting.set(setting)
+	return nil
+}
+
+func (w *spotWorker) Run() error {
+	
+	return nil
 }
