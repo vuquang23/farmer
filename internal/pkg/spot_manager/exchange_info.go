@@ -15,13 +15,13 @@ func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- struct{}) {
 	logger := logger.WithDescription("Manager updates exchange info periodically")
 
 	once := &sync.Once{}
-	for range time.NewTicker(time.Hour).C {
+	ticker := time.NewTicker(time.Hour)
+	for ; true; <-ticker.C {
 		if err := m.updateExchangeInfo(); err != nil {
 			logger.Sugar().Error(err)
-			// assume always update successfully on the first time
+			// FIXME: now assume always update successfully on the first time
 			continue
 		}
-
 		once.Do(func() {
 			doneC <- struct{}{}
 		})

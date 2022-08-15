@@ -5,6 +5,7 @@ import (
 
 	"farmer/internal/pkg/repositories"
 	sw "farmer/internal/pkg/spot_worker"
+	"farmer/internal/pkg/utils/logger"
 )
 
 type spotManager struct {
@@ -44,10 +45,14 @@ func (m *spotManager) Run(startC chan<- error) {
 		return
 	}
 
+	logger.Logger.Info("Start worker manager successfully")
+
 	startC <- nil
 }
 
 func (m *spotManager) loadWorkers() error {
+	logger.Logger.Debug("Load workers")
+
 	workerEntities, err := m.swRepo.GetAllWorkers()
 	if err != nil {
 		return err
@@ -63,6 +68,8 @@ func (m *spotManager) loadWorkers() error {
 }
 
 func (m *spotManager) startWorkers() error {
+	logger.Logger.Debug("Start workers")
+
 	workerEntities, err := m.swRepo.GetAllWorkers()
 	if err != nil {
 		return err

@@ -32,6 +32,5 @@ func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorker) error {
 }
 
 func (w *spotWorker) Run() error {
-	
 	return nil
 }
