@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"database/sql"
-	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mysql"
@@ -46,7 +45,6 @@ func NewMigration(dir string) (Migration, error) {
 
 func (t *MySQLMigration) MigrateUp(up int) error {
 	if up == 0 {
-		fmt.Println("haa ")
 		return t.m.Up()
 	} else {
 		return t.m.Steps(up)

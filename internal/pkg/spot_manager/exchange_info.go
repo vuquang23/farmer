@@ -3,6 +3,7 @@ package spotmanager
 import (
 	"context"
 	"strconv"
+	"sync"
 	"time"
 
 	"farmer/internal/pkg/entities"
@@ -10,13 +11,20 @@ import (
 	"farmer/internal/pkg/utils/maths"
 )
 
-func (m *spotManager) updateExchangeInfoPeriodically() {
+func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- struct{}) {
 	logger := logger.WithDescription("Manager updates exchange info periodically")
 
-	for range time.NewTicker(time.Hour).C {
+	once := &sync.Once{}
+	ticker := time.NewTicker(time.Hour)
+	for ; true; <-ticker.C {
 		if err := m.updateExchangeInfo(); err != nil {
 			logger.Sugar().Error(err)
+			// FIXME: now assume always update successfully on the first time
+			continue
 		}
+		once.Do(func() {
+			doneC <- struct{}{}
+		})
 	}
 }
 
