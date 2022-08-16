@@ -1,8 +1,9 @@
 package spotworker
 
 import (
-	"farmer/internal/pkg/entities"
 	"sync"
+
+	"farmer/internal/pkg/entities"
 )
 
 type workerSetting struct {

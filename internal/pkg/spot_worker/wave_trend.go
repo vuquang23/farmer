@@ -2,13 +2,14 @@ package spotworker
 
 import (
 	"context"
+	"fmt"
+	"sync"
+	"time"
+
 	e "farmer/internal/pkg/entities"
 	"farmer/internal/pkg/errors"
 	"farmer/internal/pkg/utils/indicators"
 	"farmer/internal/pkg/utils/logger"
-	"fmt"
-	"sync"
-	"time"
 )
 
 type waveTrendData struct {

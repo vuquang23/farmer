@@ -1,9 +1,9 @@
 package telebot
 
 import (
-	"farmer/internal/pkg/enum"
-
 	tb "gopkg.in/telebot.v3"
+
+	"farmer/internal/pkg/enum"
 )
 
 type CreateSpotBotRequest struct {

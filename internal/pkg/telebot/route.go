@@ -2,10 +2,11 @@ package telebot
 
 import (
 	"encoding/json"
-	"farmer/internal/pkg/utils/logger"
 	"strings"
 
 	tb "gopkg.in/telebot.v3"
+
+	"farmer/internal/pkg/utils/logger"
 )
 
 func setupRoute(telebot *teleBot) {

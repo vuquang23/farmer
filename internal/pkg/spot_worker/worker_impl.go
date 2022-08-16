@@ -1,12 +1,13 @@
 package spotworker
 
 import (
-	"farmer/internal/pkg/entities"
-	"farmer/internal/pkg/utils/logger"
 	"sync/atomic"
 	"time"
 
 	"github.com/adshao/go-binance/v2"
+
+	"farmer/internal/pkg/entities"
+	"farmer/internal/pkg/utils/logger"
 )
 
 type spotWorker struct {
