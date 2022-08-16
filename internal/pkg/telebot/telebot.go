@@ -1,12 +1,14 @@
 package telebot
 
 import (
-	"farmer/internal/pkg/utils/logger"
 	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 	tb "gopkg.in/telebot.v3"
+
+	"farmer/internal/pkg/config"
+	"farmer/internal/pkg/utils/logger"
 )
 
 type ITeleBot interface {
@@ -27,10 +29,14 @@ func TeleBotInstance() ITeleBot {
 	return tlbot
 }
 
-func InitTeleBot(token string, groupID int64) error {
+func InitTeleBot() error {
 	if tlbot != nil {
 		return nil
 	}
+
+	token := config.Instance().Telebot.Token
+	groupID := int64(config.Instance().Telebot.GroupID)
+
 	bot, err := tb.NewBot(tb.Settings{
 		Token:  token,
 		Poller: &tb.LongPoller{Timeout: 10 * time.Second},

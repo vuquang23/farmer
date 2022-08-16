@@ -2,7 +2,6 @@ package builder
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
@@ -51,7 +50,6 @@ func (sys *spotFarmerSystem) Run() error {
 
 	go sys.t.Run()
 
-	fmt.Println(cfg.Instance().Http.BindAddress)
 	return sys.server.Run(cfg.Instance().Http.BindAddress)
 }
 

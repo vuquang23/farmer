@@ -7,23 +7,31 @@ import (
 	"time"
 
 	"farmer/internal/pkg/entities"
+	"farmer/internal/pkg/errors"
 	"farmer/internal/pkg/utils/logger"
 	"farmer/internal/pkg/utils/maths"
 )
 
-func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- struct{}) {
-	logger := logger.WithDescription("Manager updates exchange info periodically")
+func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- error) {
+	log := logger.WithDescription("Update exchange info periodically")
 
 	once := &sync.Once{}
 	ticker := time.NewTicker(time.Hour)
+	isInit := true
 	for ; true; <-ticker.C {
 		if err := m.updateExchangeInfo(); err != nil {
-			logger.Sugar().Error(err)
-			// FIXME: now assume always update successfully on the first time
+			domainErr := errors.NewDomainErrorInitExchangeInfo(err)
+			if isInit {
+				doneC <- domainErr
+				return
+			}
+			log.Sugar().Error(domainErr)
 			continue
 		}
+
 		once.Do(func() {
-			doneC <- struct{}{}
+			isInit = false
+			doneC <- nil
 		})
 	}
 }

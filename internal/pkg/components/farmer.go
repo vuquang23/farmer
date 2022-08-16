@@ -2,7 +2,6 @@ package components
 
 import (
 	"farmer/internal/pkg/binance"
-	"farmer/internal/pkg/config"
 	"farmer/internal/pkg/db"
 	"farmer/internal/pkg/repositories"
 	spotmanager "farmer/internal/pkg/spot_manager"
@@ -13,7 +12,7 @@ import (
 func InitSpotFarmerComponents(isTest bool) {
 	logger.InitLogger()
 
-	telebot.InitTeleBot(config.Instance().Telebot.Token, int64(config.Instance().Telebot.GroupID))
+	telebot.InitTeleBot()
 
 	binance.InitBinanceSpotClient(isTest)
 

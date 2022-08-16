@@ -7,13 +7,19 @@ import (
 
 type workerSetting struct {
 	mu              *sync.Mutex
-	symbol          string
+	symbol          string // eg: BTCUSDT, ETHUSDT,...
 	buyCountAllowed uint64
 	buyCount        int64
 	buyNotional     float64
 }
 
-func (s *workerSetting) set(e entities.SpotWorker) {
+func newWorkerSetting() *workerSetting {
+	return &workerSetting{
+		mu: &sync.Mutex{},
+	}
+}
+
+func (s *workerSetting) store(e entities.SpotWorker) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.symbol = e.Symbol
@@ -22,25 +28,25 @@ func (s *workerSetting) set(e entities.SpotWorker) {
 	s.buyNotional = e.BuyNotional
 }
 
-func (s *workerSetting) getSymbol() string {
+func (s *workerSetting) loadSymbol() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.symbol
 }
 
-func (s *workerSetting) getBuyCountAllowed() uint64 {
+func (s *workerSetting) loadBuyCountAllowed() uint64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.buyCountAllowed
 }
 
-func (s *workerSetting) getBuyNotional() float64 {
+func (s *workerSetting) loadBuyNotional() float64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.buyNotional
 }
 
-func (s *workerSetting) getBuyCount() int64 {
+func (s *workerSetting) loadBuyCount() int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.buyCount

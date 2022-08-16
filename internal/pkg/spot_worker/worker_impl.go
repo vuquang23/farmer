@@ -2,35 +2,71 @@ package spotworker
 
 import (
 	"farmer/internal/pkg/entities"
-	"sync"
+	"farmer/internal/pkg/utils/logger"
+	"sync/atomic"
+	"time"
+
+	"github.com/adshao/go-binance/v2"
 )
 
 type spotWorker struct {
-	exchangeInf *exchangeInfo
-	setting     *workerSetting
+	bclient      *binance.Client
+	exchangeInf  *exchangeInfo
+	setting      *workerSetting
+	waveTrendDat *waveTrendData
+
+	stopSignal *uint32
 }
 
-func NewSpotWorker() ISpotWorker {
+func NewSpotWorker(bclient *binance.Client) ISpotWorker {
+	stopSignal := uint32(0)
+
 	return &spotWorker{
-		exchangeInf: &exchangeInfo{
-			mu: &sync.Mutex{},
-		},
-		setting: &workerSetting{
-			mu: &sync.Mutex{},
-		},
+		bclient:      bclient,
+		exchangeInf:  newExchangeInfo(),
+		setting:      newWorkerSetting(),
+		waveTrendDat: newWaveTrendData(),
+
+		stopSignal: &stopSignal,
 	}
 }
 
 func (w *spotWorker) SetExchangeInfo(info entities.ExchangeInfo) error {
-	w.exchangeInf.set(info)
+	w.exchangeInf.store(info)
 	return nil
 }
 
 func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorker) error {
-	w.setting.set(setting)
+	w.setting.store(setting)
 	return nil
 }
 
-func (w *spotWorker) Run() error {
-	return nil
+func (w *spotWorker) SetStopSignal() {
+	atomic.StoreUint32(w.stopSignal, 1)
+}
+
+func (w *spotWorker) getStopSignal() bool {
+	return atomic.LoadUint32(w.stopSignal) > 0
+}
+
+func (w *spotWorker) Run(startC chan<- error) {
+	doneC := make(chan error)
+	go w.updateWaveTrendPeriodically(doneC)
+	if err := <-doneC; err != nil {
+		startC <- err
+		return
+	}
+	startC <- nil
+
+	w.runMainProcessor()
+}
+
+func (w *spotWorker) runMainProcessor() {
+	log := logger.WithDescription("Run main processor")
+	ID := w.setting.loadSymbol()
+	log.Sugar().Infof("%s worker started", ID)
+
+	for range time.NewTicker(time.Second).C {
+		log.Sugar().Infof("Value: %f", w.waveTrendDat.loadCurrentTci())
+	}
 }

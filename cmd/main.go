@@ -17,6 +17,7 @@ import (
 	spotmanager "farmer/internal/pkg/spot_manager"
 	"farmer/internal/pkg/telebot"
 	"farmer/internal/pkg/utils/logger"
+	_ "farmer/pkg/errors"
 )
 
 func main() {
@@ -153,7 +154,7 @@ func calcWavetrendMomentumCommand() *cli.Command {
 
 	return &cli.Command{
 		Name:  "wtmomentum",
-		Usage: "Calculate wavetrend momentum value from a symbol list",
+		Usage: "Calculate real (not test market) wavetrend momentum value from a symbol list",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:  symlistFlag,

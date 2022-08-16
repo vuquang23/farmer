@@ -11,3 +11,10 @@ type WavetrendMomentum struct {
 	Symbol string // eg: BTC, ETH, ...
 	Value  float64
 }
+
+type PastWavetrend struct {
+	LastOpenTime uint64
+	LastD        float64
+	LastEsa      float64
+	PastTci      []float64
+}
