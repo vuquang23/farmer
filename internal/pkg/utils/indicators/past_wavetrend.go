@@ -52,7 +52,7 @@ func calcDifWavetrend(tci []float64, averageLen uint64, limit uint64) []float64 
 	ret := []float64{}
 
 	for i := lenTci - int(limit) - int(averageLen); i < lenTci; i++ {
-		currentSum += float64(tci[i])
+		currentSum += tci[i]
 		if i >= lenTci-int(limit) {
 			currentSum -= tci[i-int(averageLen)]
 			ret = append(ret, tci[i]-currentSum/float64(averageLen))
