@@ -2,13 +2,10 @@ package spotworker
 
 import (
 	"sync/atomic"
-	"time"
 
 	"github.com/adshao/go-binance/v2"
 
-	c "farmer/internal/pkg/constants"
 	"farmer/internal/pkg/entities"
-	"farmer/internal/pkg/utils/logger"
 )
 
 type spotWorker struct {
@@ -61,16 +58,4 @@ func (w *spotWorker) Run(startC chan<- error) {
 	startC <- nil
 
 	w.runMainProcessor()
-}
-
-func (w *spotWorker) runMainProcessor() {
-	log := logger.WithDescription("Run main processor")
-	ID := w.setting.loadSymbol()
-	log.Sugar().Infof("%s worker started", ID)
-
-	ticker := time.NewTicker(c.ProcessingFrequencyTime)
-	for ; !w.getStopSignal(); <-ticker.C {
-		log.Sugar().Infof("Value TCI: %f", w.waveTrendDat.loadCurrentTci())
-		log.Sugar().Infof("Value Dif wavetrend: %f", w.waveTrendDat.loadCurrentDifWavetrend())
-	}
 }

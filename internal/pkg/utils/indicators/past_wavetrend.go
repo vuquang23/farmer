@@ -48,14 +48,14 @@ func CalculatePastWavetrendData(candles []*e.MinimalKline, n1, n2 uint64) (*e.Pa
 // constraint: averageLen + limit <= len(tci)
 func calcDifWavetrend(tci []float64, averageLen uint64, limit uint64) []float64 {
 	lenTci := len(tci)
-	currentSum := 0
+	currentSum := float64(0)
 	ret := []float64{}
 
 	for i := lenTci - int(limit) - int(averageLen); i < lenTci; i++ {
-		currentSum += int(tci[i])
+		currentSum += tci[i]
 		if i >= lenTci-int(limit) {
-			currentSum -= int(tci[i-int(averageLen)])
-			ret = append(ret, tci[i]-float64(currentSum)/float64(averageLen))
+			currentSum -= tci[i-int(averageLen)]
+			ret = append(ret, tci[i]-currentSum/float64(averageLen))
 		}
 	}
 
@@ -94,13 +94,13 @@ func nextEma(lastEma, currentVal float64, period uint64) float64 {
 func CalculateCurrentTciAndDifWavetrendFromPastWavetrendDatAndCurrentCandle(wt *e.PastWavetrend, candles []*e.MinimalKline, n1, n2 uint64) (float64, float64) {
 	wt, _ = CalculatePastWavetrendDataWithNewCandles(wt, candles, n1, n2)
 
-	sumTci := 0
+	sumTci := float64(0)
 	for i := len(wt.PastTci) - c.AverageWavetrendLen; i < len(wt.PastTci); i++ {
-		sumTci += int(wt.PastTci[i])
+		sumTci += wt.PastTci[i]
 	}
 
 	currentTci := wt.PastTci[len(wt.PastTci)-1]
-	currentDifWavetrend := currentTci - float64(sumTci)/c.AverageWavetrendLen
+	currentDifWavetrend := currentTci - sumTci/c.AverageWavetrendLen
 
 	return currentTci, currentDifWavetrend
 }
