@@ -17,4 +17,5 @@ type PastWavetrend struct {
 	LastD        float64
 	LastEsa      float64
 	PastTci      []float64
+	DifWavetrend []float64
 }

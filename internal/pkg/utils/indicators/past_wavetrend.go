@@ -5,6 +5,7 @@ import (
 
 	"github.com/cinar/indicator"
 
+	c "farmer/internal/pkg/constants"
 	e "farmer/internal/pkg/entities"
 )
 
@@ -30,13 +31,35 @@ func CalculatePastWavetrendData(candles []*e.MinimalKline, n1, n2 uint64) (*e.Pa
 
 	tci := indicator.Ema(int(n2), ci)
 
+	cachedTci := tci[len(tci)-30:]
+	difWavetrend := calcDifWavetrend(cachedTci, c.AverageWavetrendLen, c.DifWavetrendCacheLen)
+
 	ret := &e.PastWavetrend{
 		LastOpenTime: candles[len(candles)-1].OpenTime,
 		LastD:        d[len(d)-1],
 		LastEsa:      esa[len(esa)-1],
-		PastTci:      tci[len(tci)-30:],
+		PastTci:      cachedTci,
+		DifWavetrend: difWavetrend,
 	}
 	return ret, nil
+}
+
+// calcDifWavetrend calculate difference between wt1 and wt2.
+// constraint: averageLen + limit <= len(tci)
+func calcDifWavetrend(tci []float64, averageLen uint64, limit uint64) []float64 {
+	lenTci := len(tci)
+	currentSum := 0
+	ret := []float64{}
+
+	for i := lenTci - int(limit) - int(averageLen); i < lenTci; i++ {
+		currentSum += int(tci[i])
+		if i >= lenTci-int(limit) {
+			currentSum -= int(tci[i-int(averageLen)])
+			ret = append(ret, tci[i]-float64(currentSum)/float64(averageLen))
+		}
+	}
+
+	return ret
 }
 
 func CalculatePastWavetrendDataWithNewCandles(wt *e.PastWavetrend, candles []*e.MinimalKline, n1, n2 uint64) (*e.PastWavetrend, error) {
@@ -57,6 +80,9 @@ func CalculatePastWavetrendDataWithNewCandles(wt *e.PastWavetrend, candles []*e.
 		wt.PastTci = wt.PastTci[1:]
 	}
 
+	difWavetrend := calcDifWavetrend(wt.PastTci, c.AverageWavetrendLen, c.DifWavetrendCacheLen)
+	wt.DifWavetrend = difWavetrend
+
 	return wt, nil
 }
 
@@ -65,7 +91,16 @@ func nextEma(lastEma, currentVal float64, period uint64) float64 {
 	return (currentVal * k) + (lastEma * float64(1-k))
 }
 
-func CalculateCurrentTciFromPastWavetrendDatAndCurrentCandle(wt *e.PastWavetrend, candles []*e.MinimalKline, n1, n2 uint64) float64 {
+func CalculateCurrentTciAndDifWavetrendFromPastWavetrendDatAndCurrentCandle(wt *e.PastWavetrend, candles []*e.MinimalKline, n1, n2 uint64) (float64, float64) {
 	wt, _ = CalculatePastWavetrendDataWithNewCandles(wt, candles, n1, n2)
-	return wt.PastTci[len(wt.PastTci)-1]
+
+	sumTci := 0
+	for i := len(wt.PastTci) - c.AverageWavetrendLen; i < len(wt.PastTci); i++ {
+		sumTci += int(wt.PastTci[i])
+	}
+
+	currentTci := wt.PastTci[len(wt.PastTci)-1]
+	currentDifWavetrend := currentTci - float64(sumTci)/c.AverageWavetrendLen
+
+	return currentTci, currentDifWavetrend
 }

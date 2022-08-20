@@ -6,6 +6,7 @@ import (
 
 	"github.com/adshao/go-binance/v2"
 
+	c "farmer/internal/pkg/constants"
 	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/utils/logger"
 )
@@ -67,7 +68,9 @@ func (w *spotWorker) runMainProcessor() {
 	ID := w.setting.loadSymbol()
 	log.Sugar().Infof("%s worker started", ID)
 
-	for range time.NewTicker(time.Second).C {
-		log.Sugar().Infof("Value: %f", w.waveTrendDat.loadCurrentTci())
+	ticker := time.NewTicker(c.ProcessingFrequencyTime)
+	for ; !w.getStopSignal(); <-ticker.C {
+		log.Sugar().Infof("Value TCI: %f", w.waveTrendDat.loadCurrentTci())
+		log.Sugar().Infof("Value Dif wavetrend: %f", w.waveTrendDat.loadCurrentDifWavetrend())
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	c "farmer/internal/pkg/constants"
 	e "farmer/internal/pkg/entities"
 	"farmer/internal/pkg/errors"
 	"farmer/internal/pkg/utils/indicators"
@@ -19,8 +20,10 @@ type waveTrendData struct {
 	lastD        float64
 	lastEsa      float64
 	pastTci      []float64 // len 30
+	difWavetrend []float64 // len 6
 
-	currentTci float64
+	currentTci          float64
+	currentDifWavetrend float64
 }
 
 func newWaveTrendData() *waveTrendData {
@@ -42,6 +45,7 @@ func (wt *waveTrendData) storePastWaveTrendData(pastData e.PastWavetrend) {
 	wt.lastD = pastData.LastD
 	wt.lastEsa = pastData.LastEsa
 	wt.pastTci = pastData.PastTci
+	wt.difWavetrend = pastData.DifWavetrend
 }
 
 func (wt *waveTrendData) loadPastWaveTrendData() e.PastWavetrend {
@@ -52,6 +56,7 @@ func (wt *waveTrendData) loadPastWaveTrendData() e.PastWavetrend {
 		LastD:        wt.lastD,
 		LastEsa:      wt.lastEsa,
 		PastTci:      wt.pastTci,
+		DifWavetrend: wt.difWavetrend,
 	}
 }
 
@@ -67,6 +72,18 @@ func (wt *waveTrendData) loadCurrentTci() float64 {
 	return wt.currentTci
 }
 
+func (wt *waveTrendData) storeCurrentDifWavetrend(value float64) {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	wt.currentDifWavetrend = value
+}
+
+func (wt *waveTrendData) loadCurrentDifWavetrend() float64 {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	return wt.currentDifWavetrend
+}
+
 func (w *spotWorker) updateWaveTrendPeriodically(doneC chan<- error) {
 	ID := w.setting.loadSymbol()
 	log := logger.WithDescription(fmt.Sprintf("%s - update wave trend periodically", ID))
@@ -77,9 +94,9 @@ func (w *spotWorker) updateWaveTrendPeriodically(doneC chan<- error) {
 	}
 
 	once := &sync.Once{}
-	ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(c.ProcessingFrequencyTime)
 	oneMinute := uint64(60000)
-	for ; true; <-ticker.C {
+	for ; !w.getStopSignal(); <-ticker.C {
 		// check whether now is new interval
 		lastOpenTime := w.waveTrendDat.loadLastOpenTime()
 		now := uint64(time.Now().UnixMilli())
@@ -106,31 +123,27 @@ func (w *spotWorker) updateWaveTrendPeriodically(doneC chan<- error) {
 		}
 
 		pastWavetrend := w.waveTrendDat.loadPastWaveTrendData()
-		currentTci := indicators.CalculateCurrentTciFromPastWavetrendDatAndCurrentCandle(
+		currentTci, currentDifWavetrend := indicators.CalculateCurrentTciAndDifWavetrendFromPastWavetrendDatAndCurrentCandle(
 			&pastWavetrend, indicators.SpotKlineToMinimalKline(candle),
-			10, 21,
+			c.EmaLenN1, c.EmaLenN2,
 		)
 		w.waveTrendDat.storeCurrentTci(currentTci)
+		w.waveTrendDat.storeCurrentDifWavetrend(currentDifWavetrend)
 
 		once.Do(func() {
 			doneC <- nil
 		})
-
-		if w.getStopSignal() {
-			return
-		}
 	}
 }
 
 func (w *spotWorker) initWaveTrendPastData() error {
-	limit := 600
 	symbol := w.setting.loadSymbol()
 	interval := "1m"
 
 	candles, err := w.bclient.NewKlinesService().
 		Symbol(symbol).
 		Interval(interval).
-		Limit(int(limit)).
+		Limit(int(c.KlineHistoryLen)).
 		Do(context.Background())
 	if err != nil {
 		return err
@@ -139,7 +152,7 @@ func (w *spotWorker) initWaveTrendPastData() error {
 
 	pastWavetrend, _ := indicators.CalculatePastWavetrendData(
 		indicators.SpotKlineToMinimalKline(candles),
-		10, 21,
+		c.EmaLenN1, c.EmaLenN2,
 	)
 
 	w.waveTrendDat.storePastWaveTrendData(*pastWavetrend)
@@ -164,7 +177,7 @@ func (w *spotWorker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit u
 	res, err := indicators.CalculatePastWavetrendDataWithNewCandles(
 		&pastWaveTrend,
 		indicators.SpotKlineToMinimalKline(candles),
-		10, 21,
+		c.EmaLenN1, c.EmaLenN2,
 	)
 	if err != nil {
 		return err

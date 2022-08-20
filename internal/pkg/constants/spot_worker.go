@@ -1,5 +1,7 @@
 package constants
 
+import "time"
+
 const (
-	SpotWorkerLimit = 5
+	ProcessingFrequencyTime = time.Second
 )
