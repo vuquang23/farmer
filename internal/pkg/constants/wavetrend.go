@@ -8,5 +8,5 @@ const (
 	TciCacheLen          = 30
 	DifWavetrendCacheLen = 6
 
-	KlineHistoryLen = 666
+	KlineHistoryLen = 600
 )
