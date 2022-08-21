@@ -19,7 +19,7 @@ func (w *spotWorker) runMainProcessor() {
 		log.Sugar().Infof("Value TCI: %f", w.waveTrendDat.loadCurrentTci())
 		log.Sugar().Infof("Value Dif wavetrend: %f", w.waveTrendDat.loadCurrentDifWavetrend())
 
-		if w.shouldBuy() {
+		if w.shouldBuy() && !w.isDowntrendOnSecondaryWavetrend() {
 			log.Sugar().Infof("Should buy now %s", time.Now().String())
 			os.Exit(0)
 			continue

@@ -31,7 +31,7 @@ func CalculatePastWavetrendData(candles []*e.MinimalKline, n1, n2 uint64) (*e.Pa
 
 	tci := indicator.Ema(int(n2), ci)
 
-	cachedTci := tci[len(tci)-30:]
+	cachedTci := tci[len(tci)-c.TciCacheLen:]
 	difWavetrend := calcDifWavetrend(cachedTci, c.AverageWavetrendLen, c.DifWavetrendCacheLen)
 
 	ret := &e.PastWavetrend{
@@ -103,4 +103,58 @@ func CalculateCurrentTciAndDifWavetrendFromPastWavetrendDatAndCurrentCandle(wt *
 	currentDifWavetrend := currentTci - sumTci/c.AverageWavetrendLen
 
 	return currentTci, currentDifWavetrend
+}
+
+func CalculateSecondaryPastWavetrendData(candles []*e.MinimalKline, n1, n2 uint64) (*e.SecondaryPastWavetrend, error) {
+	ap := Hlc3(candles)
+	esa := indicator.Ema(int(n1), ap)
+
+	// ap[0] = esa[0]
+	ap = ap[1:]
+	esa = esa[1:]
+
+	abs := []float64{}
+	for i := 0; i < len(esa); i++ {
+		abs = append(abs, math.Abs(ap[i]-esa[i]))
+	}
+
+	d := indicator.Ema(int(n1), abs)
+
+	ci := []float64{}
+	for i := 0; i < len(d); i++ {
+		ci = append(ci, (ap[i]-esa[i])/(0.015*d[i]))
+	}
+
+	tci := indicator.Ema(int(n2), ci)
+
+	cachedTci := tci[len(tci)-c.SecondaryTciCacheLen:]
+
+	ret := &e.SecondaryPastWavetrend{
+		LastOpenTime: candles[len(candles)-1].OpenTime,
+		LastD:        d[len(d)-1],
+		LastEsa:      esa[len(esa)-1],
+		PastTci:      cachedTci,
+	}
+	return ret, nil
+}
+
+func CalculateSecondaryPastWavetrendDataWithNewCandles(wt *e.SecondaryPastWavetrend, candles []*e.MinimalKline, n1, n2 uint64) (*e.SecondaryPastWavetrend, error) {
+	for _, c := range candles {
+		currentHlc3 := (c.High + c.Low + c.Close) / 3
+		lastTci := wt.PastTci[len(wt.PastTci)-1]
+
+		currentEsa := nextEma(wt.LastEsa, currentHlc3, n1)
+		currentAbs := math.Abs(currentHlc3 - currentEsa)
+		currentD := nextEma(wt.LastD, currentAbs, n1)
+		currentCi := (currentHlc3 - currentEsa) / (0.015 * currentD)
+		currentTci := nextEma(lastTci, currentCi, n2)
+
+		wt.LastOpenTime = c.OpenTime
+		wt.LastD = currentD
+		wt.LastEsa = currentEsa
+		wt.PastTci = append(wt.PastTci, currentTci)
+		wt.PastTci = wt.PastTci[1:]
+	}
+
+	return wt, nil
 }
