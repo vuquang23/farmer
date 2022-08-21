@@ -3,6 +3,7 @@ package spotworker
 import (
 	"fmt"
 	"os"
+	"time"
 
 	c "farmer/internal/pkg/constants"
 	"farmer/internal/pkg/utils/logger"
@@ -13,20 +14,18 @@ func (w *spotWorker) runMainProcessor() {
 	log := logger.WithDescription(fmt.Sprintf("%s - Main proccessor", ID))
 	log.Sugar().Infof("Worker started")
 
-	// ticker := time.NewTicker(c.ProcessingFrequencyTime)
-	// for ; !w.getStopSignal(); <-ticker.C {
-	// 	log.Sugar().Infof("Value TCI: %f", w.waveTrendDat.loadCurrentTci())
-	// 	log.Sugar().Infof("Value Dif wavetrend: %f", w.waveTrendDat.loadCurrentDifWavetrend())
+	ticker := time.NewTicker(c.ProcessingFrequencyTime)
+	for ; !w.getStopSignal(); <-ticker.C {
+		log.Sugar().Infof("Value TCI: %f", w.waveTrendDat.loadCurrentTci())
+		log.Sugar().Infof("Value Dif wavetrend: %f", w.waveTrendDat.loadCurrentDifWavetrend())
 
-	// 	if w.shouldBuy() && !w.isDowntrendOnSecondaryWavetrend() {
-	// 		log.Sugar().Infof("Should buy now %s", time.Now().String())
-	// 		os.Exit(0)
-	// 		continue
-	// 	}
+		if w.shouldBuy() && !w.isDowntrendOnSecondaryWavetrend() {
+			log.Sugar().Infof("Should buy now %s", time.Now().String())
+			os.Exit(0)
+			continue
+		}
 
-	// }
-	fmt.Println(w.secondaryWavetrendDat.loadPastTci())
-	os.Exit(0)
+	}
 }
 
 func (w *spotWorker) shouldBuy() bool {
