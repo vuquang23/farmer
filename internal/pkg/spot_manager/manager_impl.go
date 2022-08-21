@@ -72,8 +72,6 @@ func (m *spotManager) loadWorkers() error {
 }
 
 func (m *spotManager) startWorkers() error {
-	logger.Logger.Debug("Start workers")
-
 	workerEntities, err := m.swRepo.GetAllWorkers()
 	if err != nil {
 		return err
@@ -88,6 +86,8 @@ func (m *spotManager) startWorkers() error {
 			return err
 		}
 	}
+
+	logger.Logger.Sugar().Infof("Start %d workers", len(workerEntities))
 
 	return nil
 }

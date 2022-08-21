@@ -19,3 +19,10 @@ type PastWavetrend struct {
 	PastTci      []float64
 	DifWavetrend []float64
 }
+
+type SecondaryPastWavetrend struct {
+	LastOpenTime uint64
+	LastD        float64
+	LastEsa      float64
+	PastTci      []float64
+}

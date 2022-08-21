@@ -3,6 +3,7 @@ package spotworker
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 	"time"
 
@@ -184,5 +185,154 @@ func (w *spotWorker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit u
 	}
 
 	w.waveTrendDat.storePastWaveTrendData(*res)
+	return nil
+}
+
+type secondaryWavetrendData struct {
+	mu *sync.Mutex
+
+	lastOpenTime uint64
+	lastD        float64
+	lastEsa      float64
+	pastTci      []float64 // len 3
+}
+
+func newSecondaryWaveTrendData() *secondaryWavetrendData {
+	return &secondaryWavetrendData{
+		mu: &sync.Mutex{},
+	}
+}
+
+func (wt *secondaryWavetrendData) store(value e.SecondaryPastWavetrend) {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	wt.lastOpenTime = value.LastOpenTime
+	wt.lastD = value.LastD
+	wt.lastEsa = value.LastEsa
+	wt.pastTci = value.PastTci
+}
+
+func (wt *secondaryWavetrendData) loadPastTci() []float64 {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	return wt.pastTci
+}
+
+func (wt *secondaryWavetrendData) loadLastOpenTime() uint64 {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	return wt.lastOpenTime
+}
+
+func (wt *secondaryWavetrendData) load() e.SecondaryPastWavetrend {
+	wt.mu.Lock()
+	defer wt.mu.Unlock()
+	return e.SecondaryPastWavetrend{
+		LastOpenTime: wt.lastOpenTime,
+		LastD:        wt.lastD,
+		LastEsa:      wt.lastEsa,
+		PastTci:      wt.pastTci,
+	}
+}
+
+// isDowntrendOnSecondaryWavetrend equals with delta = 2.0
+func (w *spotWorker) isDowntrendOnSecondaryWavetrend() bool {
+	delta := 2.0
+	pastTci := w.secondaryWavetrendDat.loadPastTci()
+	mx := -1000.0
+	mn := 1000.0
+	for i := 0; i < len(pastTci); i++ {
+		mx = math.Max(mx, pastTci[i])
+		mn = math.Min(mn, pastTci[i])
+		if i > 0 && pastTci[i] > pastTci[i-1] {
+			return false
+		}
+	}
+
+	return mx-mn > delta
+}
+
+// updateSecondaryWavetrendPeriodically update 1h based wavetrend.
+// sleep 1 minute to check whether now is new interval.
+func (w *spotWorker) updateSecondaryWavetrendPeriodically(doneC chan<- error) {
+	ID := w.setting.loadSymbol()
+	log := logger.WithDescription(fmt.Sprintf("%s - update secondary wave trend periodically", ID))
+
+	if err := w.initSecondaryWaveTrendPastData(); err != nil {
+		doneC <- errors.NewDomainErrorInitWavetrendData(err, ID)
+		return
+	}
+
+	doneC <- nil
+
+	ticker := time.NewTicker(c.SecondaryProcessingFrequencyTime)
+	oneHour := uint64(3600000) // milisec
+	for ; !w.getStopSignal(); <-ticker.C {
+		// check whether now is new interval
+		lastOpenTime := w.secondaryWavetrendDat.loadLastOpenTime()
+		now := uint64(time.Now().UnixMilli())
+		if now-lastOpenTime <= oneHour*2 {
+			continue
+
+		}
+		err := w.updateSecondaryWaveTrendForNextInterval(
+			lastOpenTime+oneHour,
+			(now-lastOpenTime)/oneHour-1,
+		)
+		if err != nil {
+			log.Sugar().Error(err)
+			continue
+		}
+	}
+}
+
+func (w *spotWorker) initSecondaryWaveTrendPastData() error {
+	symbol := w.setting.loadSymbol()
+	interval := "1h"
+
+	candles, err := w.bclient.NewKlinesService().
+		Symbol(symbol).
+		Interval(interval).
+		Limit(int(c.KlineHistoryLen)).
+		Do(context.Background())
+	if err != nil {
+		return err
+	}
+	candles = candles[:len(candles)-1] // drop last candle
+
+	secondaryPastWavetrend, _ := indicators.CalculateSecondaryPastWavetrendData(
+		indicators.SpotKlineToMinimalKline(candles),
+		c.EmaLenN1, c.EmaLenN2,
+	)
+
+	w.secondaryWavetrendDat.store(*secondaryPastWavetrend)
+	return nil
+}
+
+func (w *spotWorker) updateSecondaryWaveTrendForNextInterval(fromOpenTime uint64, limit uint64) error {
+	symbol := w.setting.loadSymbol()
+	interval := "1h"
+
+	candles, err := w.bclient.NewKlinesService().
+		Symbol(symbol).
+		Interval(interval).
+		StartTime(int64(fromOpenTime)).
+		Limit(int(limit)).
+		Do(context.Background())
+	if err != nil {
+		return err
+	}
+
+	secondaryPastWaveTrend := w.secondaryWavetrendDat.load()
+	res, err := indicators.CalculateSecondaryPastWavetrendDataWithNewCandles(
+		&secondaryPastWaveTrend,
+		indicators.SpotKlineToMinimalKline(candles),
+		c.EmaLenN1, c.EmaLenN2,
+	)
+	if err != nil {
+		return err
+	}
+
+	w.secondaryWavetrendDat.store(*res)
 	return nil
 }

@@ -9,10 +9,11 @@ import (
 )
 
 type spotWorker struct {
-	bclient      *binance.Client
-	exchangeInf  *exchangeInfo
-	setting      *workerSetting
-	waveTrendDat *waveTrendData
+	bclient               *binance.Client
+	exchangeInf           *exchangeInfo
+	setting               *workerSetting
+	waveTrendDat          *waveTrendData
+	secondaryWavetrendDat *secondaryWavetrendData
 
 	stopSignal *uint32
 }
@@ -21,10 +22,11 @@ func NewSpotWorker(bclient *binance.Client) ISpotWorker {
 	stopSignal := uint32(0)
 
 	return &spotWorker{
-		bclient:      bclient,
-		exchangeInf:  newExchangeInfo(),
-		setting:      newWorkerSetting(),
-		waveTrendDat: newWaveTrendData(),
+		bclient:               bclient,
+		exchangeInf:           newExchangeInfo(),
+		setting:               newWorkerSetting(),
+		waveTrendDat:          newWaveTrendData(),
+		secondaryWavetrendDat: newSecondaryWaveTrendData(),
 
 		stopSignal: &stopSignal,
 	}
@@ -51,6 +53,12 @@ func (w *spotWorker) getStopSignal() bool {
 func (w *spotWorker) Run(startC chan<- error) {
 	doneC := make(chan error)
 	go w.updateWaveTrendPeriodically(doneC)
+	if err := <-doneC; err != nil {
+		startC <- err
+		return
+	}
+
+	go w.updateSecondaryWavetrendPeriodically(doneC)
 	if err := <-doneC; err != nil {
 		startC <- err
 		return
