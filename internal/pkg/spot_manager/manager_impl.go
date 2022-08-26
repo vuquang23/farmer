@@ -7,6 +7,7 @@ import (
 	"farmer/internal/pkg/repositories"
 	sw "farmer/internal/pkg/spot_worker"
 	"farmer/internal/pkg/utils/logger"
+	wtp "farmer/internal/pkg/wavetrend"
 )
 
 type spotManager struct {
@@ -63,7 +64,7 @@ func (m *spotManager) loadWorkers() error {
 	}
 
 	for _, workerEntity := range workerEntities {
-		worker := sw.NewSpotWorker(bn.BinanceSpotClientInstance())
+		worker := sw.NewSpotWorker(bn.BinanceSpotClientInstance(), wtp.WavetrendProviderInstance())
 		worker.SetWorkerSetting(*workerEntity)
 		m.mapSymbolWorker[workerEntity.Symbol] = worker
 	}

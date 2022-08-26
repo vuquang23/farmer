@@ -3,8 +3,7 @@ package constants
 import "time"
 
 const (
-	ProcessingFrequencyTime          = time.Second
-	SecondaryProcessingFrequencyTime = time.Minute
+	SleepAfterProcessing = time.Second
 
 	WavetrendOverbought = 50
 	WavetrendOversold   = -53
