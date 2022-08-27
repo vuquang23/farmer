@@ -45,6 +45,10 @@ func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorker) error {
 func (w *spotWorker) SetStopSignal() {
 	atomic.StoreUint32(w.stopSignal, 1)
 
+	// pass signal to providers
+	for _, timeFrame := range w.wavetrendTimeFrames {
+		w.wavetrendProvider.SetStopSignal(wavetrendSvcName(w.setting.symbol, timeFrame))
+	}
 }
 
 func (w *spotWorker) getStopSignal() bool {
