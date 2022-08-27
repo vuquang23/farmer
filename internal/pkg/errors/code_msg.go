@@ -6,4 +6,7 @@ const (
 
 	DomainErrCodeInitWavetrendData = "DOMAIN:INIT_WAVETREND_DATA"
 	DomainErrMsgInitWavetrendData  = "Domain error: Worker can not init wavetrend data"
+
+	DomainErrCodeWavetrendServiceNameExisted = "DOMAIN:WAVETREND_SERVICE_NAME_EXISTED"
+	DomainErrMsgWavetrendServiceNameExisted  = "Domain error: Wavetrend service name is already registered with provider"
 )

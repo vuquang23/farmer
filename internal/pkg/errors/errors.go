@@ -9,3 +9,7 @@ func NewDomainErrorInitExchangeInfo(rootCause error, entities ...string) *pkgErr
 func NewDomainErrorInitWavetrendData(rootCause error, entities ...string) *pkgErr.DomainError {
 	return pkgErr.NewDomainError(DomainErrCodeInitWavetrendData, DomainErrMsgInitWavetrendData, entities, rootCause)
 }
+
+func NewDomainErrorWavetrendServiceNameExisted(rootCause error, entities ...string) *pkgErr.DomainError {
+	return pkgErr.NewDomainError(DomainErrCodeWavetrendServiceNameExisted, DomainErrMsgWavetrendServiceNameExisted, entities, rootCause)
+}
