@@ -37,7 +37,7 @@ func (w *spotWorker) SetExchangeInfo(info entities.ExchangeInfo) error {
 	return nil
 }
 
-func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorker) error {
+func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorkerStatus) error {
 	w.setting.store(setting)
 	return nil
 }
