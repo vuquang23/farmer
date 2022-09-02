@@ -58,15 +58,15 @@ func (m *spotManager) Run(startC chan<- error) {
 func (m *spotManager) loadWorkers() error {
 	logger.Logger.Debug("Load workers")
 
-	workerEntities, err := m.swRepo.GetAllWorkers()
+	workerStatus, err := m.swRepo.GetAllWorkerStatus()
 	if err != nil {
 		return err
 	}
 
-	for _, workerEntity := range workerEntities {
+	for _, w := range workerStatus {
 		worker := sw.NewSpotWorker(bn.BinanceSpotClientInstance(), wtp.WavetrendProviderInstance())
-		worker.SetWorkerSetting(*workerEntity)
-		m.mapSymbolWorker[workerEntity.Symbol] = worker
+		worker.SetWorkerSetting(*w)
+		m.mapSymbolWorker[w.Symbol] = worker
 	}
 
 	return nil

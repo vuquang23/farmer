@@ -7,4 +7,5 @@ import (
 
 type ISpotWorkerRepository interface {
 	GetAllWorkers() ([]*entities.SpotWorker, *errors.InfraError)
+	GetAllWorkerStatus() ([]*entities.SpotWorkerStatus, *errors.InfraError)
 }

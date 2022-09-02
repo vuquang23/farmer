@@ -20,13 +20,13 @@ func newWorkerSetting() *workerSetting {
 	}
 }
 
-func (s *workerSetting) store(e entities.SpotWorker) {
+func (s *workerSetting) store(e entities.SpotWorkerStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.symbol = e.Symbol
-	s.buyCountAllowed = e.BuyCountAllowed
-	s.buyCount = e.BuyCount
-	s.buyNotional = e.BuyNotional
+	s.buyCountAllowed = e.UnitBuyAllowed
+	s.buyCount = int64(e.TotalUnitBought)
+	s.buyNotional = e.UnitNotional
 }
 
 func (s *workerSetting) loadSymbol() string {
