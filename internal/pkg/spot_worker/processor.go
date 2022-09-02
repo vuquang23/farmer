@@ -79,12 +79,13 @@ func (w *spotWorker) createBuyOrder(bSignal *en.BuySignal) (*binance.CreateOrder
 				continue
 			}
 
-			res, err := b.CreateSpotBuyOrder(
+			log.Sugar().Infof("Try to buy with notional: %f and price: %f", notional, price)
+
+			if res, err := b.CreateSpotBuyOrder(
 				w.bclient, w.setting.symbol,
 				maths.RoundingUp(qty, w.exchangeInf.loadQtyPrecision()),
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
-			)
-			if err == nil {
+			); err == nil {
 				return res, nil
 			} else {
 				log.Sugar().Error(err)
