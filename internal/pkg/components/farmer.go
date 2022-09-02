@@ -19,10 +19,11 @@ func InitSpotFarmerComponents(isTest bool) {
 
 	db.InitDB()
 
-	wtp.InitWavetrendProvider()
-
 	// repo
 	repositories.InitSpotWorkerRepository(db.Instance())
+	repositories.InitSpotTradeRepository(db.Instance())
+
+	wtp.InitWavetrendProvider()
 
 	spotmanager.InitSpotManager(
 		binance.BinanceSpotClientInstance(),

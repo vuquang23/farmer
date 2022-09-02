@@ -7,11 +7,10 @@ import (
 )
 
 type workerSetting struct {
-	mu              *sync.Mutex
-	symbol          string // eg: BTCUSDT, ETHUSDT,...
-	unitBuyAllowed  uint64
-	totalUnitBought int64
-	unitNotional    float64
+	mu             *sync.Mutex
+	symbol         string // eg: BTCUSDT, ETHUSDT,...
+	unitBuyAllowed uint64
+	unitNotional   float64
 }
 
 func newWorkerSetting() *workerSetting {
@@ -25,15 +24,7 @@ func (s *workerSetting) store(e entities.SpotWorkerStatus) {
 	defer s.mu.Unlock()
 	s.symbol = e.Symbol
 	s.unitBuyAllowed = e.UnitBuyAllowed
-	s.totalUnitBought = int64(e.TotalUnitBought)
 	s.unitNotional = e.UnitNotional
-}
-
-func (s *workerSetting) loadSymbol() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.symbol
 }
 
 func (s *workerSetting) loadUnitBuyAllowed() uint64 {
@@ -48,18 +39,4 @@ func (s *workerSetting) loadUnitNotional() float64 {
 	defer s.mu.Unlock()
 
 	return s.unitNotional
-}
-
-func (s *workerSetting) loadTotalUnitBought() int64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.totalUnitBought
-}
-
-func (s *workerSetting) updateTotalUnitBought(value int64) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.totalUnitBought += value
 }

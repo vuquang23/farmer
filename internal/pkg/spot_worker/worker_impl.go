@@ -7,28 +7,35 @@ import (
 	"github.com/adshao/go-binance/v2"
 
 	"farmer/internal/pkg/entities"
+	"farmer/internal/pkg/repositories"
 	wt "farmer/internal/pkg/wavetrend"
 )
 
 type spotWorker struct {
+	ID                  uint64
 	bclient             *binance.Client
 	exchangeInf         *exchangeInfo
 	setting             *workerSetting
 	stopSignal          *uint32
 	wavetrendProvider   wt.IWavetrendProvider
 	wavetrendTimeFrames []string
+	stt                 *status
+	spotTradeRepo       repositories.ISpotTradeRepository
 }
 
-func NewSpotWorker(bclient *binance.Client, wavetrendProvider wt.IWavetrendProvider) ISpotWorker {
+func NewSpotWorker(ID uint64, bclient *binance.Client, wavetrendProvider wt.IWavetrendProvider, spotTradeRepo repositories.ISpotTradeRepository) ISpotWorker {
 	stopSignal := uint32(0)
 
 	return &spotWorker{
+		ID:                  ID,
 		bclient:             bclient,
 		exchangeInf:         newExchangeInfo(),
 		setting:             newWorkerSetting(),
 		stopSignal:          &stopSignal,
 		wavetrendProvider:   wavetrendProvider,
 		wavetrendTimeFrames: []string{"1m", "1h"},
+		stt:                 newStatus(),
+		spotTradeRepo:       spotTradeRepo,
 	}
 }
 
@@ -37,8 +44,9 @@ func (w *spotWorker) SetExchangeInfo(info entities.ExchangeInfo) error {
 	return nil
 }
 
-func (w *spotWorker) SetWorkerSetting(setting entities.SpotWorkerStatus) error {
-	w.setting.store(setting)
+func (w *spotWorker) SetWorkerSettingAndStatus(s entities.SpotWorkerStatus) error {
+	w.setting.store(s)
+	w.stt.updateTotalUnitBought(int64(s.TotalUnitBought))
 	return nil
 }
 
