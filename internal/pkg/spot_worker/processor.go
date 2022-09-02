@@ -34,7 +34,7 @@ func (w *spotWorker) runMainProcessor() {
 				continue
 			}
 
-			log.Sugar().Infof("%+v\n", res)
+			log.Sugar().Infof("Create a buy order successfully: %+v\n", res)
 
 			w.afterBuy(res, bSignal.Order.UnitBought)
 		}
