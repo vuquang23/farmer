@@ -64,8 +64,13 @@ func (m *spotManager) loadWorkers() error {
 	}
 
 	for _, w := range workerStatus {
-		worker := sw.NewSpotWorker(bn.BinanceSpotClientInstance(), wtp.WavetrendProviderInstance())
-		worker.SetWorkerSetting(*w)
+		worker := sw.NewSpotWorker(
+			w.ID,
+			bn.BinanceSpotClientInstance(),
+			wtp.WavetrendProviderInstance(),
+			repositories.SpotTradeRepositoryInstance(),
+		)
+		worker.SetWorkerSettingAndStatus(*w)
 		m.mapSymbolWorker[w.Symbol] = worker
 	}
 

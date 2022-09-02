@@ -1,6 +1,9 @@
 package wavetrendprovider
 
-import errPkg "farmer/pkg/errors"
+import (
+	"farmer/internal/pkg/entities"
+	errPkg "farmer/pkg/errors"
+)
 
 type IWavetrendProvider interface {
 	StartService(svcName string) *errPkg.DomainError
@@ -9,4 +12,6 @@ type IWavetrendProvider interface {
 
 	GetCurrentTci(svcName string) float64
 	GetCurrentDifWavetrend(svcName string) float64
+	GetClosePrice(svcName string) float64
+	GetPastWaveTrendData(svcName string) *entities.PastWavetrend
 }

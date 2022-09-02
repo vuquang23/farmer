@@ -17,3 +17,10 @@ func GetPrecision(precisionString string) (int, error) {
 	precision := math.Log10(1 / f)
 	return int(precision), nil
 }
+
+func RoundingUp(value float64, precision int) string {
+	p10 := math.Pow10(precision)
+	rounded := math.Ceil(value*p10) / p10
+	ret := strconv.FormatFloat(rounded, 'f', precision, 64)
+	return ret
+}

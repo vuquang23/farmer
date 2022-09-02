@@ -13,3 +13,7 @@ func NewDomainErrorInitWavetrendData(rootCause error, entities ...string) *pkgEr
 func NewDomainErrorWavetrendServiceNameExisted(rootCause error, entities ...string) *pkgErr.DomainError {
 	return pkgErr.NewDomainError(DomainErrCodeWavetrendServiceNameExisted, DomainErrMsgWavetrendServiceNameExisted, entities, rootCause)
 }
+
+func NewDomainErrorCreateBuyOrderFailed(rootCause error, entities ...string) *pkgErr.DomainError {
+	return pkgErr.NewDomainError(DomainErrCodeCreateBuyOrderFailed, DomainErrMsgCreateBuyOrderFailed, entities, rootCause)
+}

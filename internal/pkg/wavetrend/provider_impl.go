@@ -2,6 +2,7 @@ package wavetrendprovider
 
 import (
 	"farmer/internal/pkg/binance"
+	"farmer/internal/pkg/entities"
 	e "farmer/internal/pkg/errors"
 	w "farmer/internal/pkg/wavetrend/worker"
 	errPkg "farmer/pkg/errors"
@@ -64,4 +65,20 @@ func (p *wavetrendProvider) GetCurrentDifWavetrend(svcName string) float64 {
 		return w.GetCurrentDifWavetrend()
 	}
 	return 0
+}
+
+func (p *wavetrendProvider) GetClosePrice(svcName string) float64 {
+	w, ok := p.mapping[svcName]
+	if ok {
+		return w.GetClosePrice()
+	}
+	return 0
+}
+
+func (p *wavetrendProvider) GetPastWaveTrendData(svcName string) *entities.PastWavetrend {
+	w, ok := p.mapping[svcName]
+	if ok {
+		return w.GetPastWaveTrendData()
+	}
+	return nil
 }

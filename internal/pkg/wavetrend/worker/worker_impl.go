@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -11,6 +12,7 @@ import (
 	"github.com/adshao/go-binance/v2"
 
 	c "farmer/internal/pkg/constants"
+	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/errors"
 	"farmer/internal/pkg/utils/indicators"
 	"farmer/internal/pkg/utils/logger"
@@ -60,6 +62,15 @@ func (w *worker) GetCurrentDifWavetrend() float64 {
 	return w.loadCurrentDifWavetrend()
 }
 
+func (w *worker) GetClosePrice() float64 {
+	return w.loadClosePrice()
+}
+
+func (w *worker) GetPastWaveTrendData() *entities.PastWavetrend {
+	ret := w.loadPastWaveTrendData()
+	return &ret
+}
+
 func (w *worker) Run(done chan<- error) {
 	log := logger.WithDescription(fmt.Sprintf("[%s-%s] Update wave trend periodically", w.symbol, w.timeFrame))
 
@@ -97,6 +108,7 @@ func (w *worker) Run(done chan<- error) {
 			continue
 		}
 
+		// update wavetrend data
 		pastWavetrend := w.loadPastWaveTrendData()
 		currentTci, currentDifWavetrend := indicators.CalcCurrentTciAndDifWavetrend(
 			&pastWavetrend, indicators.SpotKlineToMinimalKline(candle),
@@ -104,6 +116,10 @@ func (w *worker) Run(done chan<- error) {
 		)
 		w.storeCurrentTci(currentTci)
 		w.storeCurrentDifWavetrend(currentDifWavetrend)
+
+		// update price
+		closePrice, _ := strconv.ParseFloat(candle[0].Close, 64)
+		w.storeClosePrice(closePrice)
 
 		once.Do(func() {
 			done <- nil

@@ -9,4 +9,7 @@ const (
 
 	DomainErrCodeWavetrendServiceNameExisted = "DOMAIN:WAVETREND_SERVICE_NAME_EXISTED"
 	DomainErrMsgWavetrendServiceNameExisted  = "Domain error: Wavetrend service name is already registered with provider"
+
+	DomainErrCodeCreateBuyOrderFailed = "DOMAIN:CREATE_BUY_ORDER_FAILED"
+	DomainErrMsgCreateBuyOrderFailed  = "Domain error: Create buy order failed"
 )
