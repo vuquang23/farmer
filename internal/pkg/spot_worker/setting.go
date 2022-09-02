@@ -32,29 +32,34 @@ func (s *workerSetting) store(e entities.SpotWorkerStatus) {
 func (s *workerSetting) loadSymbol() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	return s.symbol
 }
 
 func (s *workerSetting) loadUnitBuyAllowed() uint64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	return s.unitBuyAllowed
 }
 
 func (s *workerSetting) loadUnitNotional() float64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	return s.unitNotional
 }
 
 func (s *workerSetting) loadTotalUnitBought() int64 {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	return s.totalUnitBought
 }
 
 func (s *workerSetting) updateTotalUnitBought(value int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.totalUnitBought += value
 }
