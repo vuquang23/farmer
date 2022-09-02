@@ -18,7 +18,7 @@ func (s *status) updateTotalUnitBought(value int64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.totalUnitBought = value
+	s.totalUnitBought += value
 }
 
 func (s *status) loadTotalUnitBought() int64 {

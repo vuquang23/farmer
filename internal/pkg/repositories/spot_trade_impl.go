@@ -28,7 +28,7 @@ func SpotTradeRepositoryInstance() ISpotTradeRepository {
 func (r *spotTradeRepository) GetNotDoneBuyOrdersBySymbol(symbol string) ([]*entities.SpotTrade, *pkgErr.InfraError) {
 	ret := []*entities.SpotTrade{}
 
-	if err := r.db.Where("symbol = ? AND is_done = ?", symbol, false).Find(&ret).Error; err != nil {
+	if err := r.db.Where("symbol = ? AND SIDE = ? AND is_done = ?", symbol, "BUY", false).Find(&ret).Error; err != nil {
 		return nil, pkgErr.NewInfraErrorDBSelect(err)
 	}
 
