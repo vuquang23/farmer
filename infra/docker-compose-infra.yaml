@@ -1,15 +1,13 @@
 version: "3.7"
 
-name: farmer
-
 networks:
   farmer-app:
     driver: bridge
 
 services:
   mysql:
-    container_name: farmer-mysql
     image: 'bitnami/mysql:latest'
+    container_name: mysql
     volumes:
       - ./volumes/mysql/data:/bitnami/mysql/data
     environment:
