@@ -17,7 +17,9 @@ func InitSpotFarmerComponents(isTest bool) {
 
 	binance.InitBinanceSpotClient(isTest)
 
-	db.InitDB()
+	if err := db.InitDB(); err != nil {
+		panic(err)
+	}
 
 	// repo
 	repositories.InitSpotWorkerRepository(db.Instance())
