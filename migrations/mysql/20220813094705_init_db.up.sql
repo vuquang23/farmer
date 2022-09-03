@@ -1,17 +1,19 @@
 CREATE TABLE IF NOT EXISTS `spot_workers` (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    symbol TEXT NOT NULL,
+    symbol VARCHAR(16) NOT NULL,
     unit_buy_allowed INT NOT NULL,
     unit_notional FLOAT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `spot_trades` (
     id INT PRIMARY KEY AUTO_INCREMENT,
-    side VARCHAR(5) NOT NULL,
+    symbol VARCHAR(16) NOT NULL,
+    side VARCHAR(8) NOT NULL,
     binance_order_id INT NOT NULL,
     spot_worker_id INT NOT NULL,
-    qty FLOAT NOT NULL,
-    cummulative_quote_quantity FLOAT NOT NULL,
+    qty VARCHAR(64) NOT NULL,
+    cummulative_quote_qty FLOAT NOT NULL,
+    price FLOAT NOT NULL,
     ref INT,
     is_done BOOLEAN NOT NULL,
     unit_bought INT NOT NULL,
@@ -22,4 +24,6 @@ CREATE TABLE IF NOT EXISTS `spot_trades` (
 ALTER TABLE
     `spot_trades`
 ADD
-    FOREIGN KEY spot_worker_id REFERENCES `spot_workers` (id) ON DELETE CASCADE;
+    FOREIGN KEY (spot_worker_id) REFERENCES `spot_workers` (id) ON DELETE CASCADE;
+
+CREATE INDEX Sym_Side_IsDone_Time ON `spot_trades`(spot_worker_id, side, is_done, created_at);

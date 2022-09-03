@@ -24,3 +24,19 @@ func CreateSpotBuyOrder(client *binance.Client, symbol string, qty string, price
 
 	return order, nil
 }
+
+func CreateSpotSellOrder(client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, error) {
+	order, err := client.NewCreateOrderService().Symbol(symbol).
+		Side(binance.SideTypeSell).Type(binance.OrderTypeLimit).
+		TimeInForce(binance.TimeInForceTypeFOK).Quantity(qty).Price(price).
+		Do(context.Background())
+	if err != nil {
+		return nil, errors.NewDomainErrorCreateSellOrderFailed(err)
+	}
+
+	if order.Status != binance.OrderStatusTypeFilled {
+		return nil, errors.NewDomainErrorCreateSellOrderFailed(fmt.Errorf("status: %s", order.Status))
+	}
+
+	return order, nil
+}

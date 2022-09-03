@@ -22,24 +22,299 @@ func (w *spotWorker) runMainProcessor() {
 	ticker := time.NewTicker(c.SleepAfterProcessing)
 	for ; !w.getStopSignal(); <-ticker.C {
 		// check if should buy
-		bSignal, err := w.buySignal()
+		w.analyzeWavetrendAndBuy()
+
+		// check if should sell with wavetrend
+		w.analyzeWavetrendAndSell()
+
+		// check if should sell with exception
+		w.analyzeExceptionsAndSell()
+	}
+}
+
+func (w *spotWorker) analyzeExceptionsAndSell() {
+	log := logger.WithDescription(fmt.Sprintf("%s - Analyze Exceptions And Sell", w.setting.symbol))
+
+	sSignal, err := w.sellSignalExceptions()
+	if err != nil {
+		log.Sugar().Error(err)
+		return
+	}
+
+	if sSignal.ShouldSell {
+		res, err := w.createSellOrders(sSignal)
 		if err != nil {
 			log.Sugar().Error(err)
-			continue
+			return
 		}
-		if bSignal.ShouldBuy {
-			res, err := w.createBuyOrder(bSignal)
-			if err != nil {
-				log.Sugar().Error(err)
-				continue
+
+		if err := w.afterSell(res); err != nil {
+			log.Sugar().Error(err)
+			return
+		}
+	}
+}
+
+func (w *spotWorker) sellSignalExceptions() (*en.SellSignal, error) {
+	h1DiffWt := w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.H1))
+
+	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
+
+	now := time.Now()
+	buyOrders, err := w.spotTradeRepo.GetNotDoneBuyOrdersByWorkerIDAndCreatedAt(w.ID, now.Add(-time.Minute*100))
+	if err != nil {
+		return nil, err
+	}
+
+	orders := []*en.SellOrder{}
+	for _, b := range buyOrders {
+		if h1DiffWt < 0 {
+			if b.Price*(1+0.05/100) <= currentPrice {
+				orders = append(orders, &en.SellOrder{
+					Qty:        b.Qty,
+					UnitBought: b.UnitBought,
+					Ref:        b.ID,
+				})
+
+			}
+		} else {
+			distance := now.Sub(b.CreatedAt)
+			ok := false
+
+			switch {
+			case distance <= 20*time.Minute:
+				if b.Price*(1+1.1/100) <= currentPrice {
+					ok = true
+				}
+			case distance <= 40*time.Minute:
+				if b.Price*(1+1.4/100) <= currentPrice {
+					ok = true
+				}
+			case distance <= 60*time.Minute:
+				if b.Price*(1+1.7/100) <= currentPrice {
+					ok = true
+				}
+			case distance <= 80*time.Minute:
+				if b.Price*(1+2.0/100) <= currentPrice {
+					ok = true
+				}
+			default:
+				if b.Price*(1+2.3/100) <= currentPrice {
+					ok = true
+				}
 			}
 
-			log.Sugar().Infof("Create a buy order successfully: %+v\n", res)
+			if ok {
+				orders = append(orders, &en.SellOrder{
+					Qty:        b.Qty,
+					UnitBought: b.UnitBought,
+					Ref:        b.ID,
+				})
+			}
+		}
+	}
 
-			w.afterBuy(res, bSignal.Order.UnitBought)
+	if len(orders) == 0 {
+		return &en.SellSignal{ShouldSell: false}, nil
+	}
+
+	return &en.SellSignal{
+		ShouldSell: true,
+		Orders:     orders,
+	}, nil
+}
+
+func (w *spotWorker) analyzeWavetrendAndSell() {
+	log := logger.WithDescription(fmt.Sprintf("%s - Analyze And Sell With Wavetrend", w.setting.symbol))
+
+	sSignal, err := w.sellSignal()
+	if err != nil {
+		log.Sugar().Error(err)
+		return
+	}
+
+	if sSignal.ShouldSell {
+		res, err := w.createSellOrders(sSignal)
+		if err != nil {
+			log.Sugar().Error(err)
+			return
 		}
 
-		// check if should sell
+		if err := w.afterSell(res); err != nil {
+			log.Sugar().Error(err)
+			return
+		}
+	}
+}
+
+func (w *spotWorker) createSellOrders(sSignal *en.SellSignal) ([]*en.CreateSellOrderResponse, error) {
+	log := logger.WithDescription(fmt.Sprintf("%s - Create Sell Order", w.setting.symbol))
+
+	ret := []*en.CreateSellOrderResponse{}
+	notSold := sSignal.Orders
+
+	// sell time lasts in 60 seconds
+	ticker := time.NewTicker(time.Second)
+	for i := 0; i < 60; i, _ = i+1, <-ticker.C {
+		currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
+		// down price 0.05%
+		price := currentPrice * (1 - 0.05/100)
+
+		tempNotSold := []*en.SellOrder{}
+		for _, order := range notSold {
+			log.Sugar().Infof("Try to sold with qty: %s and price: %f", order.Qty, price)
+
+			if res, err := b.CreateSpotSellOrder(
+				w.bclient, w.setting.symbol, order.Qty,
+				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
+			); err == nil {
+				ret = append(ret, &en.CreateSellOrderResponse{
+					BinanceResponse: res,
+					Order:           order,
+				})
+			} else {
+				log.Sugar().Error(err)
+				tempNotSold = append(tempNotSold, order)
+			}
+		}
+		notSold = tempNotSold
+		if len(notSold) == 0 {
+			break
+		}
+
+		time.Sleep(time.Second)
+	}
+
+	return ret, nil
+}
+
+func (w *spotWorker) afterSell(res []*en.CreateSellOrderResponse) error {
+	log := logger.WithDescription(fmt.Sprintf("%s - After Sell", w.setting.symbol))
+
+	buyIDs := []uint64{}
+	sellTrades := []*en.SpotTrade{}
+	updateUnitBought := 0
+
+	for _, r := range res {
+		updateUnitBought += int(r.Order.UnitBought)
+		buyIDs = append(buyIDs, r.Order.Ref)
+		sellTrades = append(sellTrades, &en.SpotTrade{
+			Side:                "SELL",
+			BinanceOrderID:      uint64(r.BinanceResponse.OrderID),
+			SpotWorkerID:        w.ID,
+			Qty:                 r.BinanceResponse.ExecutedQuantity,
+			CummulativeQuoteQty: maths.StrToFloat(r.BinanceResponse.CummulativeQuoteQuantity),
+			Price:               maths.StrToFloat(r.BinanceResponse.Price),
+			Ref:                 r.Order.Ref,
+			IsDone:              true,
+			UnitBought:          r.Order.UnitBought,
+		})
+	}
+
+	w.stt.updateTotalUnitBought(int64(updateUnitBought))
+
+	if err := w.spotTradeRepo.UpdateBuyOrders(buyIDs); err != nil {
+		log.Sugar().Error(err)
+	}
+
+	if err := w.spotTradeRepo.CreateSellOrders(sellTrades); err != nil {
+		log.Sugar().Error(err)
+	}
+
+	return nil
+}
+
+func (w *spotWorker) sellSignal() (*en.SellSignal, error) {
+	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
+
+	shouldSell := w.shouldSell()
+	if !shouldSell {
+		return &en.SellSignal{ShouldSell: false}, nil
+	}
+
+	ret := &en.SellSignal{
+		ShouldSell: true,
+		Orders:     []*en.SellOrder{},
+	}
+	currentPrice := w.wavetrendProvider.GetClosePrice(m1SvcName)
+
+	trades, err := w.spotTradeRepo.GetNotDoneBuyOrdersByWorkerID(w.ID)
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range trades {
+		if t.Price*(1+0.5/100) <= currentPrice { // min benefit is 0.5%
+			ret.Orders = append(ret.Orders, &en.SellOrder{
+				Qty:        t.Qty,
+				UnitBought: t.UnitBought,
+				Ref:        t.ID,
+			})
+		}
+	}
+
+	return ret, nil
+}
+
+func (w *spotWorker) shouldSell() bool {
+	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
+
+	currentTci := w.wavetrendProvider.GetCurrentTci(m1SvcName)
+	if currentTci < c.WavetrendOverbought {
+		return false
+	}
+
+	currentDifWt := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
+	if currentDifWt >= 0 {
+		return false
+	}
+
+	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	if pastWtDat == nil { // error
+		return false
+	}
+
+	for i := len(pastWtDat.PastTci) - c.OverboughtRequiredTime; i < len(pastWtDat.PastTci); i++ {
+		if pastWtDat.PastTci[i] < c.WavetrendOverbought {
+			return false
+		}
+	}
+
+	for i := len(pastWtDat.DifWavetrend) - c.OverboughtNegativeDifWtRequiredTime - c.OverboughtPositiveDifWtRequiredTime; i < len(pastWtDat.DifWavetrend); i++ {
+		if i < len(pastWtDat.DifWavetrend)-c.OverboughtNegativeDifWtRequiredTime {
+			if pastWtDat.DifWavetrend[i] < 0 {
+				return false
+			}
+		} else {
+			if pastWtDat.DifWavetrend[i] >= 0 {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func (w *spotWorker) analyzeWavetrendAndBuy() {
+	log := logger.WithDescription(fmt.Sprintf("%s - Analyze And Buy With Wavetrend", w.setting.symbol))
+
+	bSignal, err := w.buySignal()
+	if err != nil {
+		log.Sugar().Error(err)
+		return
+	}
+
+	if bSignal.ShouldBuy {
+		res, err := w.createBuyOrder(bSignal)
+		if err != nil {
+			log.Sugar().Error(err)
+			return
+		}
+
+		log.Sugar().Infof("Create a buy order successfully: %+v\n", res)
+
+		if w.afterBuy(res, bSignal.Order.UnitBought); err != nil {
+			log.Sugar().Error(err)
+		}
 	}
 }
 
@@ -52,8 +327,9 @@ func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64
 		Side:                "BUY",
 		BinanceOrderID:      uint64(res.OrderID),
 		SpotWorkerID:        w.ID,
-		Qty:                 maths.StrToFloat(res.ExecutedQuantity),
+		Qty:                 res.ExecutedQuantity,
 		CummulativeQuoteQty: maths.StrToFloat(res.CummulativeQuoteQuantity),
+		Price:               maths.StrToFloat(res.Price),
 		IsDone:              false,
 		UnitBought:          uint64(unitBought),
 	})
@@ -123,7 +399,7 @@ func (w *spotWorker) buySignal() (*en.BuySignal, error) {
 }
 
 func (w *spotWorker) shouldBuy() bool {
-	// buy status
+	// check status
 	if w.setting.loadUnitBuyAllowed() == uint64(w.stt.loadTotalUnitBought()) {
 		return false
 	}
@@ -133,7 +409,7 @@ func (w *spotWorker) shouldBuy() bool {
 		return false
 	}
 
-	// by wavetrend
+	// check wavetrend
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
 	currentTci := w.wavetrendProvider.GetCurrentTci(m1SvcName)

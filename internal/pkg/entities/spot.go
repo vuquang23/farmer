@@ -21,8 +21,9 @@ type SpotTrade struct {
 	Side                string
 	BinanceOrderID      uint64
 	SpotWorkerID        uint64
-	Qty                 float64
+	Qty                 string
 	CummulativeQuoteQty float64
+	Price               float64
 	Ref                 uint64
 	IsDone              bool
 	UnitBought          uint64

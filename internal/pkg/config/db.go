@@ -16,7 +16,7 @@ type DBConfig struct {
 	LogLevel     int    `default:"1"`
 }
 
-func (c *DBConfig) DNS() string {
+func (c *DBConfig) DSN() string {
 	return fmt.Sprintf(
 		"%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=True&timeout=%ds",
 		c.User, c.Password, c.Host, c.Port, c.DBName, c.ConnTimeOut,

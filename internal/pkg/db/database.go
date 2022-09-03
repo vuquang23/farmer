@@ -20,7 +20,7 @@ func InitDB() error {
 
 	dbCfg := cfg.Instance().DB
 	gormDB, err := gorm.Open(
-		mysql.Open(dbCfg.DNS()),
+		mysql.Open(dbCfg.DSN()),
 		&gorm.Config{
 			Logger: logger.Default.LogMode(logger.LogLevel(dbCfg.LogLevel)),
 		},
