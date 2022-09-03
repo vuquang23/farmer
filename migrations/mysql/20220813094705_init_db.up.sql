@@ -24,6 +24,6 @@ CREATE TABLE IF NOT EXISTS `spot_trades` (
 ALTER TABLE
     `spot_trades`
 ADD
-    FOREIGN KEY spot_worker_id REFERENCES `spot_workers` (id) ON DELETE CASCADE;
+    FOREIGN KEY (spot_worker_id) REFERENCES `spot_workers` (id) ON DELETE CASCADE;
 
-CREATE INDEX Sym_Side_IsDone_Time ON `spot_trades` (spot_worker_id, side, is_done, created_at);
+CREATE INDEX Sym_Side_IsDone_Time ON `spot_trades`(spot_worker_id, side, is_done, created_at);
