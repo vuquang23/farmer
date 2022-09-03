@@ -17,3 +17,7 @@ func NewDomainErrorWavetrendServiceNameExisted(rootCause error, entities ...stri
 func NewDomainErrorCreateBuyOrderFailed(rootCause error, entities ...string) *pkgErr.DomainError {
 	return pkgErr.NewDomainError(DomainErrCodeCreateBuyOrderFailed, DomainErrMsgCreateBuyOrderFailed, entities, rootCause)
 }
+
+func NewDomainErrorCreateSellOrderFailed(rootCause error, entities ...string) *pkgErr.DomainError {
+	return pkgErr.NewDomainError(DomainErrCodeCreateSellOrderFailed, DomainErrMsgCreateSellOrderFailed, entities, rootCause)
+}

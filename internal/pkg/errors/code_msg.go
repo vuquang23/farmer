@@ -12,4 +12,7 @@ const (
 
 	DomainErrCodeCreateBuyOrderFailed = "DOMAIN:CREATE_BUY_ORDER_FAILED"
 	DomainErrMsgCreateBuyOrderFailed  = "Domain error: Create buy order failed"
+
+	DomainErrCodeCreateSellOrderFailed = "DOMAIN:CREATE_SELL_ORDER_FAILED"
+	DomainErrMsgCreateSellOrderFailed  = "Domain error: Create sell order failed"
 )
