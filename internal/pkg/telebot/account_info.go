@@ -26,13 +26,13 @@ func (tlb *teleBot) getSpotAccountInfo(ctx tb.Context) {
 		return
 	}
 
-	dtoRes := toGetAccountInfoResponse(ret)
+	dtoRes := toGetSpotAccountInfoResponse(ret)
 	byteRes, _ := json.Marshal(dtoRes)
 	msgResponse = string(pretty.Pretty(byteRes))
 	ctx.Send(msgResponse)
 }
 
-func toGetAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
+func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
 	p := []*SpotPairInfo{}
 	totalUsdBenefit := 0.0
 	currentTotalUsdValueChanged := 0.0
