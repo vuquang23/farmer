@@ -7,13 +7,19 @@ import (
 	tb "gopkg.in/telebot.v3"
 
 	"farmer/internal/pkg/entities"
+	"farmer/internal/pkg/utils/logger"
 )
 
 func (tlb *teleBot) getSpotAccountInfo(ctx tb.Context) {
+	log := logger.WithDescription("Get Spot Account Info")
+	log.Info("Receive a request")
+
 	var msgResponse string
 
 	ret, err := tlb.spotTradeSvc.GetTradingPairsInfo()
 	if err != nil {
+		log.Sugar().Error(err)
+
 		byteRes, _ := json.Marshal(err)
 		msgResponse = string(pretty.Pretty(byteRes))
 		ctx.Send(msgResponse)

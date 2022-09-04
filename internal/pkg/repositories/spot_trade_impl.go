@@ -82,7 +82,7 @@ func (r *spotTradeRepository) GetTotalQuoteBenefit(workerID uint64) (float64, *p
 	ret := response{}
 
 	querySell := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ?", workerID, "SELL")
-	err := r.db.Table("spot_trades").Joins("JOIN (?) querySell ON querySell.ref = spot_trades.id", querySell).Group("spot_worker_id").
+	err := r.db.Table("spot_trades").Joins("JOIN (?) querySell ON querySell.ref = spot_trades.id", querySell).Group("spot_trades.spot_worker_id").
 		Select("SUM(querySell.cummulative_quote_qty - spot_trades.cummulative_quote_qty) as total_quote_benefit").Find(&ret).Error
 	if err != nil {
 		return 0, pkgErr.NewInfraErrorDBSelect(err)
