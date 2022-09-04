@@ -2,6 +2,7 @@ package spotworker
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/adshao/go-binance/v2"
@@ -375,27 +376,24 @@ func (w *spotWorker) createBuyOrder(bSignal *en.BuySignal) (*binance.CreateOrder
 }
 
 func (w *spotWorker) buySignal() (*en.BuySignal, error) {
+	var unitBought int64
+
 	shouldBuy := w.shouldBuy()
 	if !shouldBuy {
 		return &en.BuySignal{ShouldBuy: false}, nil
 	}
 
-	ret := &en.BuySignal{
-		ShouldBuy: true,
-	}
-
 	h1DiffWt := w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.H1))
 	if h1DiffWt <= 0 {
-		ret.Order = en.BuyOrder{
-			UnitBought: c.UnitBuyOnDowntrend,
-		}
+		unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	} else {
-		ret.Order = en.BuyOrder{
-			UnitBought: c.UnitBuyOnUpTrend,
-		}
+		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	}
 
-	return ret, nil
+	return &en.BuySignal{
+		ShouldBuy: true,
+		Order:     en.BuyOrder{UnitBought: unitBought},
+	}, nil
 }
 
 func (w *spotWorker) shouldBuy() bool {
