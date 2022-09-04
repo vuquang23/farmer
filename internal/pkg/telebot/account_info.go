@@ -32,13 +32,13 @@ func (tlb *teleBot) getSpotAccountInfo(ctx tb.Context) {
 	ctx.Send(msgResponse)
 }
 
-func toGetAccountInfoResponse(en []*entities.TradingPairInfo) *GetAccountInfoResponse {
-	p := []*PairInfo{}
+func toGetAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
+	p := []*SpotPairInfo{}
 	totalUsdBenefit := 0.0
 	currentTotalUsdValueChanged := 0.0
 
 	for _, e := range en {
-		p = append(p, &PairInfo{
+		p = append(p, &SpotPairInfo{
 			Symbol:                 e.Symbol,
 			UsdBenefit:             e.UsdBenefit,
 			BaseAmount:             e.BaseAmount,
@@ -54,7 +54,7 @@ func toGetAccountInfoResponse(en []*entities.TradingPairInfo) *GetAccountInfoRes
 		currentTotalUsdValueChanged += e.CurrentUsdValueChanged
 	}
 
-	return &GetAccountInfoResponse{
+	return &GetSpotAccountInfoResponse{
 		Pairs:                       p,
 		TotalUsdBenefit:             totalUsdBenefit,
 		CurrentTotalUsdValueChanged: currentTotalUsdValueChanged,

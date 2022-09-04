@@ -1,8 +1,8 @@
-package telebot
+package entities
 
-// Get account Info
+// Entities for serving telebot
 type (
-	SpotPairInfo struct {
+	SpotTradingPairInfo struct {
 		Symbol                 string
 		UsdBenefit             float64
 		BaseAmount             float64
@@ -12,11 +12,5 @@ type (
 		UnitBuyAllowed         uint64
 		UnitNotional           float64
 		TotalUnitBought        uint64
-	}
-
-	GetSpotAccountInfoResponse struct {
-		Pairs                       []*SpotPairInfo
-		TotalUsdBenefit             float64
-		CurrentTotalUsdValueChanged float64
 	}
 )

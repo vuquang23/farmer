@@ -3,30 +3,30 @@ package entities
 import "github.com/adshao/go-binance/v2"
 
 type (
-	BuyOrder struct {
+	SpotBuyOrder struct {
 		UnitBought int64
 	}
 
-	BuySignal struct {
+	SpotBuySignal struct {
 		ShouldBuy bool
-		Order     BuyOrder
+		Order     SpotBuyOrder
 	}
 )
 
 type (
-	SellOrder struct {
+	SpotSellOrder struct {
 		Qty        string
 		UnitBought uint64
 		Ref        uint64
 	}
 
-	SellSignal struct {
+	SpotSellSignal struct {
 		ShouldSell bool
-		Orders     []*SellOrder
+		Orders     []*SpotSellOrder
 	}
 
-	CreateSellOrderResponse struct {
+	CreateSpotSellOrderResponse struct {
 		BinanceResponse *binance.CreateOrderResponse
-		Order           *SellOrder
+		Order           *SpotSellOrder
 	}
 )

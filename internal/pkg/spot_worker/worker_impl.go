@@ -39,7 +39,7 @@ func NewSpotWorker(ID uint64, bclient *binance.Client, wavetrendProvider wt.IWav
 	}
 }
 
-func (w *spotWorker) SetExchangeInfo(info entities.ExchangeInfo) error {
+func (w *spotWorker) SetExchangeInfo(info entities.SpotExchangeInfo) error {
 	w.exchangeInf.store(info)
 	return nil
 }

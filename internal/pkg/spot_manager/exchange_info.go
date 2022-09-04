@@ -74,7 +74,7 @@ func (m *spotManager) updateExchangeInfo() error {
 			}
 		}
 
-		worker.SetExchangeInfo(entities.ExchangeInfo{
+		worker.SetExchangeInfo(entities.SpotExchangeInfo{
 			PricePrecision: pricePrecision,
 			QtyPrecision:   qtyPrecision,
 			MinQty:         minQty,

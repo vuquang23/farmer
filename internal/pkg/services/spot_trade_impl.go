@@ -35,8 +35,8 @@ func SpotTradeServiceInstance() ISpotTradeService {
 	return spotTradeSvc
 }
 
-func (s *spotTradeService) GetTradingPairsInfo() ([]*en.TradingPairInfo, *pkgErr.DomainError) {
-	ret := []*en.TradingPairInfo{}
+func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pkgErr.DomainError) {
+	ret := []*en.SpotTradingPairInfo{}
 
 	workers, err := s.spotWorkerRepo.GetAllWorkers()
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *spotTradeService) GetTradingPairsInfo() ([]*en.TradingPairInfo, *pkgErr
 	}
 
 	for _, w := range workers {
-		temp := &en.TradingPairInfo{
+		temp := &en.SpotTradingPairInfo{
 			Symbol:         w.Symbol,
 			UnitBuyAllowed: w.UnitBuyAllowed,
 			UnitNotional:   w.UnitNotional,

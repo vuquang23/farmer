@@ -6,5 +6,5 @@ import (
 )
 
 type ISpotTradeService interface {
-	GetTradingPairsInfo() ([]*entities.TradingPairInfo, *pkgErr.DomainError)
+	GetTradingPairsInfo() ([]*entities.SpotTradingPairInfo, *pkgErr.DomainError)
 }

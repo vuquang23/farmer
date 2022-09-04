@@ -56,7 +56,7 @@ func (w *spotWorker) analyzeExceptionsAndSell() {
 	}
 }
 
-func (w *spotWorker) sellSignalExceptions() (*en.SellSignal, error) {
+func (w *spotWorker) sellSignalExceptions() (*en.SpotSellSignal, error) {
 	h1DiffWt := w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.H1))
 
 	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
@@ -67,11 +67,11 @@ func (w *spotWorker) sellSignalExceptions() (*en.SellSignal, error) {
 		return nil, err
 	}
 
-	orders := []*en.SellOrder{}
+	orders := []*en.SpotSellOrder{}
 	for _, b := range buyOrders {
 		if h1DiffWt < 0 {
 			if b.Price*(1+0.05/100) <= currentPrice {
-				orders = append(orders, &en.SellOrder{
+				orders = append(orders, &en.SpotSellOrder{
 					Qty:        b.Qty,
 					UnitBought: b.UnitBought,
 					Ref:        b.ID,
@@ -106,7 +106,7 @@ func (w *spotWorker) sellSignalExceptions() (*en.SellSignal, error) {
 			}
 
 			if ok {
-				orders = append(orders, &en.SellOrder{
+				orders = append(orders, &en.SpotSellOrder{
 					Qty:        b.Qty,
 					UnitBought: b.UnitBought,
 					Ref:        b.ID,
@@ -116,10 +116,10 @@ func (w *spotWorker) sellSignalExceptions() (*en.SellSignal, error) {
 	}
 
 	if len(orders) == 0 {
-		return &en.SellSignal{ShouldSell: false}, nil
+		return &en.SpotSellSignal{ShouldSell: false}, nil
 	}
 
-	return &en.SellSignal{
+	return &en.SpotSellSignal{
 		ShouldSell: true,
 		Orders:     orders,
 	}, nil
@@ -148,10 +148,10 @@ func (w *spotWorker) analyzeWavetrendAndSell() {
 	}
 }
 
-func (w *spotWorker) createSellOrders(sSignal *en.SellSignal) ([]*en.CreateSellOrderResponse, error) {
+func (w *spotWorker) createSellOrders(sSignal *en.SpotSellSignal) ([]*en.CreateSpotSellOrderResponse, error) {
 	log := logger.WithDescription(fmt.Sprintf("%s - Create Sell Order", w.setting.symbol))
 
-	ret := []*en.CreateSellOrderResponse{}
+	ret := []*en.CreateSpotSellOrderResponse{}
 	notSold := sSignal.Orders
 
 	// sell time lasts in 60 seconds
@@ -161,7 +161,7 @@ func (w *spotWorker) createSellOrders(sSignal *en.SellSignal) ([]*en.CreateSellO
 		// down price 0.05%
 		price := currentPrice * (1 - 0.05/100)
 
-		tempNotSold := []*en.SellOrder{}
+		tempNotSold := []*en.SpotSellOrder{}
 		for _, order := range notSold {
 			log.Sugar().Infof("Try to sold with qty: %s and price: %f", order.Qty, price)
 
@@ -169,7 +169,7 @@ func (w *spotWorker) createSellOrders(sSignal *en.SellSignal) ([]*en.CreateSellO
 				w.bclient, w.setting.symbol, order.Qty,
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
 			); err == nil {
-				ret = append(ret, &en.CreateSellOrderResponse{
+				ret = append(ret, &en.CreateSpotSellOrderResponse{
 					BinanceResponse: res,
 					Order:           order,
 				})
@@ -189,7 +189,7 @@ func (w *spotWorker) createSellOrders(sSignal *en.SellSignal) ([]*en.CreateSellO
 	return ret, nil
 }
 
-func (w *spotWorker) afterSell(res []*en.CreateSellOrderResponse) error {
+func (w *spotWorker) afterSell(res []*en.CreateSpotSellOrderResponse) error {
 	log := logger.WithDescription(fmt.Sprintf("%s - After Sell", w.setting.symbol))
 
 	buyIDs := []uint64{}
@@ -225,17 +225,17 @@ func (w *spotWorker) afterSell(res []*en.CreateSellOrderResponse) error {
 	return nil
 }
 
-func (w *spotWorker) sellSignal() (*en.SellSignal, error) {
+func (w *spotWorker) sellSignal() (*en.SpotSellSignal, error) {
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
 	shouldSell := w.shouldSell()
 	if !shouldSell {
-		return &en.SellSignal{ShouldSell: false}, nil
+		return &en.SpotSellSignal{ShouldSell: false}, nil
 	}
 
-	ret := &en.SellSignal{
+	ret := &en.SpotSellSignal{
 		ShouldSell: true,
-		Orders:     []*en.SellOrder{},
+		Orders:     []*en.SpotSellOrder{},
 	}
 	currentPrice := w.wavetrendProvider.GetClosePrice(m1SvcName)
 
@@ -245,7 +245,7 @@ func (w *spotWorker) sellSignal() (*en.SellSignal, error) {
 	}
 	for _, t := range trades {
 		if t.Price*(1+0.5/100) <= currentPrice { // min benefit is 0.5%
-			ret.Orders = append(ret.Orders, &en.SellOrder{
+			ret.Orders = append(ret.Orders, &en.SpotSellOrder{
 				Qty:        t.Qty,
 				UnitBought: t.UnitBought,
 				Ref:        t.ID,
@@ -336,7 +336,7 @@ func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64
 	})
 }
 
-func (w *spotWorker) createBuyOrder(bSignal *en.BuySignal) (*binance.CreateOrderResponse, *pkgErr.DomainError) {
+func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateOrderResponse, *pkgErr.DomainError) {
 	log := logger.WithDescription(fmt.Sprintf("%s - Create Buy Order", w.setting.symbol))
 
 	// buy time lasts in 10 seconds
@@ -375,12 +375,12 @@ func (w *spotWorker) createBuyOrder(bSignal *en.BuySignal) (*binance.CreateOrder
 	return nil, errors.NewDomainErrorCreateBuyOrderFailed(nil)
 }
 
-func (w *spotWorker) buySignal() (*en.BuySignal, error) {
+func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 	var unitBought int64
 
 	shouldBuy := w.shouldBuy()
 	if !shouldBuy {
-		return &en.BuySignal{ShouldBuy: false}, nil
+		return &en.SpotBuySignal{ShouldBuy: false}, nil
 	}
 
 	h1DiffWt := w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.H1))
@@ -390,9 +390,9 @@ func (w *spotWorker) buySignal() (*en.BuySignal, error) {
 		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	}
 
-	return &en.BuySignal{
+	return &en.SpotBuySignal{
 		ShouldBuy: true,
-		Order:     en.BuyOrder{UnitBought: unitBought},
+		Order:     en.SpotBuyOrder{UnitBought: unitBought},
 	}, nil
 }
 

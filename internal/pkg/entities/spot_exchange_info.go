@@ -1,6 +1,6 @@
 package entities
 
-type ExchangeInfo struct {
+type SpotExchangeInfo struct {
 	PricePrecision int
 	QtyPrecision   int
 	MinQty         float64
