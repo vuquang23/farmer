@@ -1,32 +1,47 @@
 package entities
 
-import "github.com/adshao/go-binance/v2"
+import "time"
 
 type (
-	BuyOrder struct {
-		UnitBought int64
+	SpotWorker struct {
+		ID             uint64 `gorm:"primaryKey;autoIncrement"`
+		Symbol         string // pair
+		UnitBuyAllowed uint64
+		UnitNotional   float64
 	}
 
-	BuySignal struct {
-		ShouldBuy bool
-		Order     BuyOrder
+	SpotWorkerStatus struct {
+		SpotWorker
+		TotalUnitBought uint64
 	}
 )
 
+type SpotTrade struct {
+	ID                  uint64 `gorm:"primaryKey;autoIncrement"`
+	Side                string
+	BinanceOrderID      uint64
+	SpotWorkerID        uint64
+	Qty                 string
+	CummulativeQuoteQty float64
+	Price               float64
+	Ref                 uint64
+	IsDone              bool
+	UnitBought          uint64
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// Entities for serving telebot
 type (
-	SellOrder struct {
-		Qty        string
-		UnitBought uint64
-		Ref        uint64
-	}
-
-	SellSignal struct {
-		ShouldSell bool
-		Orders     []*SellOrder
-	}
-
-	CreateSellOrderResponse struct {
-		BinanceResponse *binance.CreateOrderResponse
-		Order           *SellOrder
+	TradingPairInfo struct {
+		Symbol                 string
+		UsdBenefit             float64
+		BaseAmount             float64
+		QuoteAmount            float64
+		CurrentUsdValue        float64
+		CurrentUsdValueChanged float64
+		UnitBuyAllowed         uint64
+		UnitNotional           float64
+		TotalUnitBought        uint64
 	}
 )

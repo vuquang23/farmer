@@ -65,11 +65,45 @@ func (r *spotTradeRepository) GetNotDoneBuyOrdersByWorkerIDAndCreatedAt(workerID
 	ret := []*entities.SpotTrade{}
 
 	err := r.db.
-		Where("spot_worker_id = ? AND SIDE = ? AND is_done = ? AND created_at >= ?", workerID, "BUY", false, createdAfter).
+		Where("spot_worker_id = ? AND side = ? AND is_done = ? AND created_at >= ?", workerID, "BUY", false, createdAfter).
 		Find(&ret).Error
 	if err != nil {
 		return nil, pkgErr.NewInfraErrorDBSelect(err)
 	}
 
 	return ret, nil
+}
+
+func (r *spotTradeRepository) GetTotalQuoteBenefit(workerID uint64) (float64, *pkgErr.InfraError) {
+	type response struct {
+		TotalQuoteBenefit float64
+	}
+
+	ret := response{}
+
+	querySell := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ?", workerID, "SELL")
+	err := r.db.Table("spot_trades").Joins("JOIN (?) querySell ON querySell.ref = spot_trades.id", querySell).Group("spot_worker_id").
+		Select("SUM(querySell.cummulative_quote_qty - spot_trades.cummulative_quote_qty) as total_quote_benefit").Find(&ret).Error
+	if err != nil {
+		return 0, pkgErr.NewInfraErrorDBSelect(err)
+	}
+
+	return ret.TotalQuoteBenefit, nil
+}
+
+func (r *spotTradeRepository) GetBaseAmountAndTotalUnitBought(workerID uint64) (float64, uint64, *pkgErr.InfraError) {
+	type response struct {
+		BaseAmount      float64
+		TotalUnitBought uint64
+	}
+
+	ret := response{}
+
+	err := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).
+		Group("spot_worker_id").Select("SUM(qty+0) as base_amount, SUM(unit_bought) as total_unit_bought").Find(&ret).Error
+	if err != nil {
+		return 0, 0, pkgErr.NewInfraErrorDBSelect(err)
+	}
+
+	return ret.BaseAmount, ret.TotalUnitBought, nil
 }

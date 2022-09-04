@@ -8,6 +8,7 @@ import (
 	tb "gopkg.in/telebot.v3"
 
 	"farmer/internal/pkg/config"
+	"farmer/internal/pkg/services"
 	"farmer/internal/pkg/utils/logger"
 )
 
@@ -21,6 +22,8 @@ type ITeleBot interface {
 type teleBot struct {
 	bot   *tb.Bot
 	group *tb.Chat
+
+	spotTradeSvc services.ISpotTradeService
 }
 
 var tlbot *teleBot
@@ -29,7 +32,7 @@ func TeleBotInstance() ITeleBot {
 	return tlbot
 }
 
-func InitTeleBot() error {
+func InitTeleBot(spotTradeSvc services.ISpotTradeService) error {
 	if tlbot != nil {
 		return nil
 	}
@@ -50,6 +53,7 @@ func InitTeleBot() error {
 			ID:   groupID,
 			Type: tb.ChatGroup,
 		},
+		spotTradeSvc: spotTradeSvc,
 	}
 
 	setupRoute(tlbot)
@@ -58,8 +62,8 @@ func InitTeleBot() error {
 }
 
 // Run run bot
-func (ltb *teleBot) Run() {
-	ltb.bot.Start()
+func (tlb *teleBot) Run() {
+	tlb.bot.Start()
 }
 
 // SendMsg sending a message to master

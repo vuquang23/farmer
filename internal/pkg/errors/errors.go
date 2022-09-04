@@ -21,3 +21,7 @@ func NewDomainErrorCreateBuyOrderFailed(rootCause error, entities ...string) *pk
 func NewDomainErrorCreateSellOrderFailed(rootCause error, entities ...string) *pkgErr.DomainError {
 	return pkgErr.NewDomainError(DomainErrCodeCreateSellOrderFailed, DomainErrMsgCreateSellOrderFailed, entities, rootCause)
 }
+
+func NewDomainErrorGetPriceFailed(rootCause error, entities ...string) *pkgErr.DomainError {
+	return pkgErr.NewDomainError(DomainErrCodeGetPriceFailed, DomainErrMsgGetPriceFailed, entities, rootCause)
+}
