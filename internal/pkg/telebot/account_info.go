@@ -3,45 +3,60 @@ package telebot
 import (
 	"encoding/json"
 
+	"github.com/tidwall/pretty"
 	tb "gopkg.in/telebot.v3"
+
+	"farmer/internal/pkg/entities"
+	"farmer/internal/pkg/utils/logger"
 )
 
-type AccountInfoQuery struct {
-	Exchange string   `json:"exchange"`
-	Symbols  []string `json:"symbols"` // eg: BTCUSDT
-}
+func (tlb *teleBot) getSpotAccountInfo(ctx tb.Context) {
+	log := logger.WithDescription("Get Spot Account Info")
+	log.Info("Receive a request")
 
-type SpotSymbolDetails struct {
-	Symbol       string  `json:"symbol"`
-	Benefit      float64 `json:"benefit"`
-	SoldOrder    uint64  `json:"soldOrder"`
-	NotSoldOrder uint64  `json:"notSoldOrder"`
-}
+	var msgResponse string
 
-type SpotAccountInfoResponse struct {
-	Exchange          string              `json:"exchange"`
-	TotalBenefit      float64             `json:"totalBenefit"`      // in USD
-	TotalSoldOrder    uint64              `json:"totalSoldOrder"`    // number of orders that is sold successfully.
-	TotalNotSoldOrder uint64              `json:"totalNotSoldOrder"` // number of orders that is waiting for good price to sell. not pending
-	Details           []SpotSymbolDetails `json:"details"`
-}
+	ret, err := tlb.spotTradeSvc.GetTradingPairsInfo()
+	if err != nil {
+		log.Sugar().Error(err)
 
-func getSpotAccountInfo(ctx tb.Context, dto *AccountInfoQuery) {
-	fake := &SpotAccountInfoResponse{
-		Exchange:          "binance",
-		TotalBenefit:      10,
-		TotalSoldOrder:    20,
-		TotalNotSoldOrder: 30,
-		Details: []SpotSymbolDetails{
-			{
-				Symbol:       "BTCUSDT",
-				Benefit:      2,
-				SoldOrder:    5,
-				NotSoldOrder: 10,
-			},
-		},
+		byteRes, _ := json.Marshal(err)
+		msgResponse = string(pretty.Pretty(byteRes))
+		ctx.Send(msgResponse)
+		return
 	}
 
-	data, _ := json.Marshal(fake)
-	ctx.Send(string(data))
+	dtoRes := toGetSpotAccountInfoResponse(ret)
+	byteRes, _ := json.Marshal(dtoRes)
+	msgResponse = string(pretty.Pretty(byteRes))
+	ctx.Send(msgResponse)
+}
+
+func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
+	p := []*SpotPairInfo{}
+	totalUsdBenefit := 0.0
+	currentTotalUsdValueChanged := 0.0
+
+	for _, e := range en {
+		p = append(p, &SpotPairInfo{
+			Symbol:                 e.Symbol,
+			UsdBenefit:             e.UsdBenefit,
+			BaseAmount:             e.BaseAmount,
+			QuoteAmount:            e.QuoteAmount,
+			CurrentUsdValue:        e.CurrentUsdValue,
+			CurrentUsdValueChanged: e.CurrentUsdValueChanged,
+			UnitBuyAllowed:         e.UnitBuyAllowed,
+			UnitNotional:           e.UnitNotional,
+			TotalUnitBought:        e.TotalUnitBought,
+		})
+
+		totalUsdBenefit += e.UsdBenefit
+		currentTotalUsdValueChanged += e.CurrentUsdValueChanged
+	}
+
+	return &GetSpotAccountInfoResponse{
+		Pairs:                       p,
+		TotalUsdBenefit:             totalUsdBenefit,
+		CurrentTotalUsdValueChanged: currentTotalUsdValueChanged,
+	}
 }

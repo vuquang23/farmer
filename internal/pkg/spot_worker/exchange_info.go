@@ -20,7 +20,7 @@ func newExchangeInfo() *exchangeInfo {
 	}
 }
 
-func (e *exchangeInfo) store(info entities.ExchangeInfo) {
+func (e *exchangeInfo) store(info entities.SpotExchangeInfo) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 

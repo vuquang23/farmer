@@ -1,32 +1,18 @@
 package entities
 
-import "github.com/adshao/go-binance/v2"
+import "time"
 
-type (
-	BuyOrder struct {
-		UnitBought int64
-	}
-
-	BuySignal struct {
-		ShouldBuy bool
-		Order     BuyOrder
-	}
-)
-
-type (
-	SellOrder struct {
-		Qty        string
-		UnitBought uint64
-		Ref        uint64
-	}
-
-	SellSignal struct {
-		ShouldSell bool
-		Orders     []*SellOrder
-	}
-
-	CreateSellOrderResponse struct {
-		BinanceResponse *binance.CreateOrderResponse
-		Order           *SellOrder
-	}
-)
+type SpotTrade struct {
+	ID                  uint64 `gorm:"primaryKey;autoIncrement"`
+	Side                string
+	BinanceOrderID      uint64
+	SpotWorkerID        uint64
+	Qty                 string
+	CummulativeQuoteQty float64
+	Price               float64
+	Ref                 uint64
+	IsDone              bool
+	UnitBought          uint64
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}

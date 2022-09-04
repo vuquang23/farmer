@@ -14,16 +14,10 @@ func setupRoute(telebot *teleBot) {
 
 	telebot.bot.Handle(tb.OnText, func(ctx tb.Context) error {
 		args := strings.Fields(ctx.Text())
+
 		switch args[0] {
 		case "get!/spot/account-info":
-			dto := &AccountInfoQuery{}
-			if err := json.Unmarshal([]byte(args[1]), dto); err != nil {
-				msg := "[get!/spotaccount-info] unmarshal error"
-				log.Error(msg)
-				ctx.Send(msg)
-				return nil
-			}
-			getSpotAccountInfo(ctx, dto)
+			tlbot.getSpotAccountInfo(ctx)
 
 		case "post!/spot/bot": // create bot that will trade a SYMBOL
 			req := &CreateSpotBotRequest{}
