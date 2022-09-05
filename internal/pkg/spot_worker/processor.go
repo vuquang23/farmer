@@ -34,7 +34,11 @@ func (w *spotWorker) runMainProcessor() {
 
 		// check health
 		if time.Since(lastAliveLog) > 3*time.Hour {
-			log.Info("Alive")
+			m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
+			log.Sugar().Infof(
+				"Alive - Tci: %f - DifWavetrend: %f",
+				w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
+			)
 			lastAliveLog = time.Now()
 		}
 	}
