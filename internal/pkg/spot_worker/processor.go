@@ -20,6 +20,7 @@ func (w *spotWorker) runMainProcessor() {
 	log := logger.WithDescription(fmt.Sprintf("%s - Main Proccessor", w.setting.symbol))
 	log.Sugar().Infof("Worker started")
 
+	lastAliveLog := time.Unix(0, 0)
 	ticker := time.NewTicker(c.SleepAfterProcessing)
 	for ; !w.getStopSignal(); <-ticker.C {
 		// check if should buy
@@ -30,6 +31,12 @@ func (w *spotWorker) runMainProcessor() {
 
 		// check if should sell with exception
 		w.analyzeExceptionsAndSell()
+
+		// check health
+		if time.Since(lastAliveLog) > 3*time.Hour {
+			log.Info("Alive")
+			lastAliveLog = time.Now()
+		}
 	}
 }
 
@@ -151,24 +158,34 @@ func (w *spotWorker) analyzeWavetrendAndSell() {
 func (w *spotWorker) createSellOrders(sSignal *en.SpotSellSignal) ([]*en.CreateSpotSellOrderResponse, error) {
 	log := logger.WithDescription(fmt.Sprintf("%s - Create Sell Order", w.setting.symbol))
 
+	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
+
 	ret := []*en.CreateSpotSellOrderResponse{}
 	notSold := sSignal.Orders
 
 	// sell time lasts in 60 seconds
 	ticker := time.NewTicker(time.Second)
 	for i := 0; i < 60; i, _ = i+1, <-ticker.C {
-		currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
+		currentPrice := w.wavetrendProvider.GetClosePrice(m1SvcName)
 		// down price 0.05%
 		price := currentPrice * (1 - 0.05/100)
 
 		tempNotSold := []*en.SpotSellOrder{}
 		for _, order := range notSold {
-			log.Sugar().Infof("Try to sold with qty: %s and price: %f", order.Qty, price)
+			log.Sugar().Infof(
+				"Try to sold with Qty: %s - Price: %f - Current Tci: %f - DifWavetrend: %f",
+				order.Qty, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
+			)
 
 			if res, err := b.CreateSpotSellOrder(
 				w.bclient, w.setting.symbol, order.Qty,
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
 			); err == nil {
+				log.Sugar().Info(
+					"Sell successfully. Qty: %s - Price: %f - Ref: %d - Current Tci: %f - DifWavetrend: %f",
+					order.Qty, price, order.Ref, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
+				)
+
 				ret = append(ret, &en.CreateSpotSellOrderResponse{
 					BinanceResponse: res,
 					Order:           order,
@@ -311,8 +328,6 @@ func (w *spotWorker) analyzeWavetrendAndBuy() {
 			return
 		}
 
-		log.Sugar().Infof("Create a buy order successfully: %+v\n", res)
-
 		if w.afterBuy(res, bSignal.Order.UnitBought); err != nil {
 			log.Sugar().Error(err)
 		}
@@ -338,11 +353,12 @@ func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64
 
 func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateOrderResponse, *pkgErr.DomainError) {
 	log := logger.WithDescription(fmt.Sprintf("%s - Create Buy Order", w.setting.symbol))
+	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
 	// buy time lasts in 10 seconds
 	ticker := time.NewTicker(time.Second)
 	for i := 0; i < 10; i, _ = i+1, <-ticker.C {
-		currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
+		currentPrice := w.wavetrendProvider.GetClosePrice(m1SvcName)
 		percentUp := 0.0
 
 		for j := 0; j < 5; j++ {
@@ -356,13 +372,21 @@ func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateO
 				continue
 			}
 
-			log.Sugar().Infof("Try to buy with notional: %f and price: %f", notional, price)
+			log.Sugar().Infof(
+				"Try to buy with Notional: %f - Price: %f - Current Tci: %f - Current difwavetrend: %f",
+				notional, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
+			)
 
 			if res, err := b.CreateSpotBuyOrder(
 				w.bclient, w.setting.symbol,
 				maths.RoundingUp(qty, w.exchangeInf.loadQtyPrecision()),
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
 			); err == nil {
+				log.Sugar().Infof(
+					"Buy successfully. Notional: %f - Price: %f - Current Tci: %f - Current difwavetrend: %f",
+					notional, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
+				)
+
 				return res, nil
 			} else {
 				log.Sugar().Error(err)
