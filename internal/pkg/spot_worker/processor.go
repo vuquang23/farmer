@@ -33,7 +33,7 @@ func (w *spotWorker) runMainProcessor() {
 		w.analyzeExceptionsAndSell()
 
 		// check health
-		if time.Since(lastAliveLog) > 3*time.Hour {
+		if time.Since(lastAliveLog) > 5*time.Minute {
 			m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 			log.Sugar().Infof(
 				"Alive - Tci: %f - DifWavetrend: %f",
