@@ -32,7 +32,7 @@ func (w *spotWorker) runMainProcessor() {
 		w.analyzeExceptionsAndSell()
 
 		// check health
-		if time.Since(w.stt.loadHealth()) > time.Minute*2 {
+		if time.Since(w.stt.loadHealth()) > time.Minute*30 {
 			w.stt.storeHealth(time.Now())
 		}
 	}
@@ -214,6 +214,7 @@ func (w *spotWorker) afterSell(res []*en.CreateSpotSellOrderResponse) error {
 		updateUnitBought += int(r.Order.UnitBought)
 		buyIDs = append(buyIDs, r.Order.Ref)
 		sellTrades = append(sellTrades, &en.SpotTrade{
+			Symbol:              w.setting.symbol,
 			Side:                "SELL",
 			BinanceOrderID:      uint64(r.BinanceResponse.OrderID),
 			SpotWorkerID:        w.ID,
@@ -339,6 +340,7 @@ func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64
 
 	// update DB
 	if err := w.spotTradeRepo.CreateBuyOrder(en.SpotTrade{
+		Symbol:              w.setting.symbol,
 		Side:                "BUY",
 		BinanceOrderID:      uint64(res.OrderID),
 		SpotWorkerID:        w.ID,
