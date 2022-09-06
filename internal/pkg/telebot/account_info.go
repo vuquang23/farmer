@@ -2,6 +2,7 @@ package telebot
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/tidwall/pretty"
 	tb "gopkg.in/telebot.v3"
@@ -36,15 +37,16 @@ func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAc
 	p := []*SpotPairInfo{}
 	totalUsdBenefit := 0.0
 	currentTotalUsdValueChanged := 0.0
+	N := 10000.
 
 	for _, e := range en {
 		p = append(p, &SpotPairInfo{
 			Symbol:                 e.Symbol,
-			UsdBenefit:             e.UsdBenefit,
-			BaseAmount:             e.BaseAmount,
-			QuoteAmount:            e.QuoteAmount,
-			CurrentUsdValue:        e.CurrentUsdValue,
-			CurrentUsdValueChanged: e.CurrentUsdValueChanged,
+			UsdBenefit:             math.Round(e.UsdBenefit*N) / N,
+			BaseAmount:             math.Round(e.BaseAmount*N) / N,
+			QuoteAmount:            math.Round(e.QuoteAmount*N) / N,
+			CurrentUsdValue:        math.Round(e.CurrentUsdValue*N) / N,
+			CurrentUsdValueChanged: math.Round(e.CurrentUsdValueChanged*N) / N,
 			UnitBuyAllowed:         e.UnitBuyAllowed,
 			UnitNotional:           e.UnitNotional,
 			TotalUnitBought:        e.TotalUnitBought,
@@ -56,7 +58,7 @@ func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAc
 
 	return &GetSpotAccountInfoResponse{
 		Pairs:                       p,
-		TotalUsdBenefit:             totalUsdBenefit,
-		CurrentTotalUsdValueChanged: currentTotalUsdValueChanged,
+		TotalUsdBenefit:             math.Round(totalUsdBenefit*N) / N,
+		CurrentTotalUsdValueChanged: math.Round(currentTotalUsdValueChanged*N) / N,
 	}
 }

@@ -97,3 +97,13 @@ func (m *spotManager) startWorkers() error {
 
 	return nil
 }
+
+func (m *spotManager) CheckHealth() map[string]string {
+	ret := make(map[string]string)
+
+	for K, V := range m.mapSymbolWorker {
+		ret[K] = V.GetHealth().String()
+	}
+
+	return ret
+}

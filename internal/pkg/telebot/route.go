@@ -18,6 +18,9 @@ func setupRoute(telebot *teleBot) {
 		switch args[0] {
 		case "get!/spot/account-info":
 			tlbot.getSpotAccountInfo(ctx)
+		
+		case "get!/spot/health":
+			tlbot.checkHealth(ctx)
 
 		case "post!/spot/bot": // create bot that will trade a SYMBOL
 			req := &CreateSpotBotRequest{}
