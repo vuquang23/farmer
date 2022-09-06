@@ -46,7 +46,7 @@ func (e *exchangeInfo) loadQtyPrecision() int {
 
 func (e *exchangeInfo) loadMinQty() float64 {
 	e.mu.Lock()
-	defer e.mu.Lock()
+	defer e.mu.Unlock()
 
 	return e.minQty
 }

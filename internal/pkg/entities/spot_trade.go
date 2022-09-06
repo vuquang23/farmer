@@ -4,6 +4,7 @@ import "time"
 
 type SpotTrade struct {
 	ID                  uint64 `gorm:"primaryKey;autoIncrement"`
+	Symbol              string
 	Side                string
 	BinanceOrderID      uint64
 	SpotWorkerID        uint64

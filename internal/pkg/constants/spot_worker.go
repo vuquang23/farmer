@@ -22,3 +22,10 @@ const (
 	UnitBuyOnDowntrend = 1
 	UnitBuyOnUpTrend   = 3
 )
+
+const (
+	MinBenefit = 0.5
+
+	ExceptionBaseBenefitOnUpTrend = 1.1
+	ExceptionStepBenefitOnUpTrend = 0.3
+)

@@ -75,7 +75,7 @@ func (w *spotWorker) sellSignalExceptions() (*en.SpotSellSignal, error) {
 	orders := []*en.SpotSellOrder{}
 	for _, b := range buyOrders {
 		if h1DiffWt < 0 {
-			if b.Price*(1+0.05/100) <= currentPrice {
+			if b.Price*(1+c.MinBenefit/100) <= currentPrice {
 				orders = append(orders, &en.SpotSellOrder{
 					Qty:        b.Qty,
 					UnitBought: b.UnitBought,
@@ -88,23 +88,23 @@ func (w *spotWorker) sellSignalExceptions() (*en.SpotSellSignal, error) {
 
 			switch {
 			case distance <= 20*time.Minute:
-				if b.Price*(1+1.1/100) <= currentPrice {
+				if b.Price*(1+(c.ExceptionBaseBenefitOnUpTrend+0*c.ExceptionStepBenefitOnUpTrend)/100) <= currentPrice {
 					ok = true
 				}
 			case distance <= 40*time.Minute:
-				if b.Price*(1+1.4/100) <= currentPrice {
+				if b.Price*(1+(c.ExceptionBaseBenefitOnUpTrend+1*c.ExceptionStepBenefitOnUpTrend)/100) <= currentPrice {
 					ok = true
 				}
 			case distance <= 60*time.Minute:
-				if b.Price*(1+1.7/100) <= currentPrice {
+				if b.Price*(1+(c.ExceptionBaseBenefitOnUpTrend+2*c.ExceptionStepBenefitOnUpTrend)/100) <= currentPrice {
 					ok = true
 				}
 			case distance <= 80*time.Minute:
-				if b.Price*(1+2.0/100) <= currentPrice {
+				if b.Price*(1+(c.ExceptionBaseBenefitOnUpTrend+3*c.ExceptionStepBenefitOnUpTrend)/100) <= currentPrice {
 					ok = true
 				}
 			default:
-				if b.Price*(1+2.3/100) <= currentPrice {
+				if b.Price*(1+(c.ExceptionBaseBenefitOnUpTrend+4*c.ExceptionStepBenefitOnUpTrend)/100) <= currentPrice {
 					ok = true
 				}
 			}
@@ -258,7 +258,7 @@ func (w *spotWorker) sellSignal() (*en.SpotSellSignal, error) {
 		return nil, err
 	}
 	for _, t := range trades {
-		if t.Price*(1+0.5/100) <= currentPrice { // min benefit is 0.5%
+		if t.Price*(1+c.MinBenefit/100) <= currentPrice { // min benefit is 0.5%
 			ret.Orders = append(ret.Orders, &en.SpotSellOrder{
 				Qty:        t.Qty,
 				UnitBought: t.UnitBought,
@@ -271,37 +271,25 @@ func (w *spotWorker) sellSignal() (*en.SpotSellSignal, error) {
 }
 
 func (w *spotWorker) shouldSell() bool {
-	log := logger.WithDescription(fmt.Sprintf("%s - Should Sell", w.setting.symbol))
-
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
 	currentTci := w.wavetrendProvider.GetCurrentTci(m1SvcName)
 	if currentTci < c.WavetrendOverbought {
-		log.Sugar().Debug("flag1", currentTci, c.WavetrendOverbought)
-
 		return false
 	}
 
 	currentDifWt := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
 	if currentDifWt >= 0 {
-		log.Sugar().Debug("flag2", currentDifWt)
-
 		return false
 	}
 
 	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // error
-		log.Sugar().Debug("flag3??")
-
 		return false
 	}
 
-	log.Sugar().Debug("Value WT: %+v", pastWtDat)
-
 	for i := len(pastWtDat.PastTci) - c.OverboughtRequiredTime; i < len(pastWtDat.PastTci); i++ {
 		if pastWtDat.PastTci[i] < c.WavetrendOverbought {
-			log.Sugar().Debug("flag4", pastWtDat.PastTci[i], c.WavetrendOverbought)
-
 			return false
 		}
 	}
@@ -309,20 +297,14 @@ func (w *spotWorker) shouldSell() bool {
 	for i := len(pastWtDat.DifWavetrend) - c.OverboughtNegativeDifWtRequiredTime - c.OverboughtPositiveDifWtRequiredTime; i < len(pastWtDat.DifWavetrend); i++ {
 		if i < len(pastWtDat.DifWavetrend)-c.OverboughtNegativeDifWtRequiredTime {
 			if pastWtDat.DifWavetrend[i] < 0 {
-				log.Sugar().Debug("flag5", pastWtDat.DifWavetrend[i])
-
 				return false
 			}
 		} else {
 			if pastWtDat.DifWavetrend[i] >= 0 {
-				log.Sugar().Debug("flag6", pastWtDat.DifWavetrend[i])
-
 				return false
 			}
 		}
 	}
-
-	log.Sugar().Debug("flag7")
 
 	return true
 }
@@ -440,18 +422,12 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 }
 
 func (w *spotWorker) shouldBuy() bool {
-	log := logger.WithDescription(fmt.Sprintf("%s - Should Buy", w.setting.symbol))
-
 	// check status
 	if w.setting.loadUnitBuyAllowed() == uint64(w.stt.loadTotalUnitBought()) {
-		log.Sugar().Debug("flag1", w.setting.loadUnitBuyAllowed(), w.stt.loadTotalUnitBought())
-
 		return false
 	}
 
 	if time.Since(w.stt.loadLastBoughtAt()) <= c.StopBuyAfterBuy {
-		log.Sugar().Debug("flag2", time.Since(w.stt.loadHealth()).String())
-
 		return false
 	}
 
@@ -460,31 +436,21 @@ func (w *spotWorker) shouldBuy() bool {
 
 	currentTci := w.wavetrendProvider.GetCurrentTci(m1SvcName)
 	if currentTci > c.WavetrendOversold {
-		log.Sugar().Debug("flag3", currentTci)
-
 		return false
 	}
 
 	currentDifWt := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
 	if currentDifWt <= 0 {
-		log.Sugar().Debug("flag4", currentDifWt)
-
 		return false
 	}
 
 	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // get error
-		log.Sugar().Debug("flag5?")
-
 		return false
 	}
 
-	log.Sugar().Debugf("Value WT: %+v", pastWtDat)
-
 	for i := len(pastWtDat.PastTci) - c.OversoldRequiredTime; i < len(pastWtDat.PastTci); i++ {
 		if pastWtDat.PastTci[i] > c.WavetrendOversold {
-			log.Sugar().Debug("flag6", pastWtDat.PastTci[i], c.WavetrendOversold)
-
 			return false
 		}
 	}
@@ -492,20 +458,14 @@ func (w *spotWorker) shouldBuy() bool {
 	for i := len(pastWtDat.DifWavetrend) - c.OversoldNegativeDifWtRequiredTime - c.OversoldPositiveDifWtRequiredTime; i < len(pastWtDat.DifWavetrend); i++ {
 		if i < len(pastWtDat.DifWavetrend)-c.OversoldPositiveDifWtRequiredTime {
 			if pastWtDat.DifWavetrend[i] > 0 {
-				log.Sugar().Debug("flag7", pastWtDat.DifWavetrend[i])
-
 				return false
 			}
 		} else {
 			if pastWtDat.DifWavetrend[i] <= 0 {
-				log.Sugar().Debug("flag8", pastWtDat.DifWavetrend[i])
-
 				return false
 			}
 		}
 	}
-
-	log.Sugar().Debug("flag9")
 
 	return true
 }
