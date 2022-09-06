@@ -3,6 +3,7 @@ package spotworker
 import (
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/adshao/go-binance/v2"
 
@@ -23,7 +24,11 @@ type spotWorker struct {
 	spotTradeRepo       repositories.ISpotTradeRepository
 }
 
-func NewSpotWorker(ID uint64, bclient *binance.Client, wavetrendProvider wt.IWavetrendProvider, spotTradeRepo repositories.ISpotTradeRepository) ISpotWorker {
+func NewSpotWorker(
+	ID uint64, bclient *binance.Client,
+	wavetrendProvider wt.IWavetrendProvider,
+	spotTradeRepo repositories.ISpotTradeRepository,
+) ISpotWorker {
 	stopSignal := uint32(0)
 
 	return &spotWorker{
@@ -57,6 +62,10 @@ func (w *spotWorker) SetStopSignal() {
 	for _, timeFrame := range w.wavetrendTimeFrames {
 		w.wavetrendProvider.SetStopSignal(wavetrendSvcName(w.setting.symbol, timeFrame))
 	}
+}
+
+func (w *spotWorker) GetHealth() time.Duration {
+	return time.Since(w.stt.loadHealth())
 }
 
 func (w *spotWorker) getStopSignal() bool {
