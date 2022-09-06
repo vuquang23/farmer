@@ -20,7 +20,6 @@ func (w *spotWorker) runMainProcessor() {
 	log := logger.WithDescription(fmt.Sprintf("%s - Main Proccessor", w.setting.symbol))
 	log.Sugar().Infof("Worker started")
 
-	lastAliveLog := time.Unix(0, 0)
 	ticker := time.NewTicker(c.SleepAfterProcessing)
 	for ; !w.getStopSignal(); <-ticker.C {
 		// check if should buy
@@ -33,13 +32,8 @@ func (w *spotWorker) runMainProcessor() {
 		w.analyzeExceptionsAndSell()
 
 		// check health
-		if time.Since(lastAliveLog) > 5*time.Minute {
-			m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
-			log.Sugar().Infof(
-				"Alive - Tci: %f - DifWavetrend: %f",
-				w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
-			)
-			lastAliveLog = time.Now()
+		if time.Since(w.stt.loadHealth()) > time.Minute*2 {
+			w.stt.storeHealth(time.Now())
 		}
 	}
 }
@@ -87,7 +81,6 @@ func (w *spotWorker) sellSignalExceptions() (*en.SpotSellSignal, error) {
 					UnitBought: b.UnitBought,
 					Ref:        b.ID,
 				})
-
 			}
 		} else {
 			distance := now.Sub(b.CreatedAt)
@@ -278,25 +271,37 @@ func (w *spotWorker) sellSignal() (*en.SpotSellSignal, error) {
 }
 
 func (w *spotWorker) shouldSell() bool {
+	log := logger.WithDescription(fmt.Sprintf("%s - Should Sell", w.setting.symbol))
+
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
 	currentTci := w.wavetrendProvider.GetCurrentTci(m1SvcName)
 	if currentTci < c.WavetrendOverbought {
+		log.Sugar().Debug("flag1", currentTci, c.WavetrendOverbought)
+
 		return false
 	}
 
 	currentDifWt := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
 	if currentDifWt >= 0 {
+		log.Sugar().Debug("flag2", currentDifWt)
+
 		return false
 	}
 
 	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // error
+		log.Sugar().Debug("flag3??")
+
 		return false
 	}
 
+	log.Sugar().Debug("Value WT: %+v", pastWtDat)
+
 	for i := len(pastWtDat.PastTci) - c.OverboughtRequiredTime; i < len(pastWtDat.PastTci); i++ {
 		if pastWtDat.PastTci[i] < c.WavetrendOverbought {
+			log.Sugar().Debug("flag4", pastWtDat.PastTci[i], c.WavetrendOverbought)
+
 			return false
 		}
 	}
@@ -304,14 +309,20 @@ func (w *spotWorker) shouldSell() bool {
 	for i := len(pastWtDat.DifWavetrend) - c.OverboughtNegativeDifWtRequiredTime - c.OverboughtPositiveDifWtRequiredTime; i < len(pastWtDat.DifWavetrend); i++ {
 		if i < len(pastWtDat.DifWavetrend)-c.OverboughtNegativeDifWtRequiredTime {
 			if pastWtDat.DifWavetrend[i] < 0 {
+				log.Sugar().Debug("flag5", pastWtDat.DifWavetrend[i])
+
 				return false
 			}
 		} else {
 			if pastWtDat.DifWavetrend[i] >= 0 {
+				log.Sugar().Debug("flag6", pastWtDat.DifWavetrend[i])
+
 				return false
 			}
 		}
 	}
+
+	log.Sugar().Debug("flag7")
 
 	return true
 }
@@ -339,11 +350,13 @@ func (w *spotWorker) analyzeWavetrendAndBuy() {
 }
 
 func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64) {
+	log := logger.WithDescription(fmt.Sprintf("%s - After Buy", w.setting.symbol))
+
 	w.stt.updateTotalUnitBought(-unitBought)
-	w.stt.storeLastBoughtAt(uint64(time.Now().Unix()))
+	w.stt.storeLastBoughtAt(time.Now())
 
 	// update DB
-	w.spotTradeRepo.CreateBuyOrder(en.SpotTrade{
+	if err := w.spotTradeRepo.CreateBuyOrder(en.SpotTrade{
 		Side:                "BUY",
 		BinanceOrderID:      uint64(res.OrderID),
 		SpotWorkerID:        w.ID,
@@ -352,7 +365,9 @@ func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64
 		Price:               maths.StrToFloat(res.Price),
 		IsDone:              false,
 		UnitBought:          uint64(unitBought),
-	})
+	}); err != nil {
+		log.Sugar().Error(err)
+	}
 }
 
 func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateOrderResponse, *pkgErr.DomainError) {
@@ -425,13 +440,18 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 }
 
 func (w *spotWorker) shouldBuy() bool {
+	log := logger.WithDescription(fmt.Sprintf("%s - Should Buy", w.setting.symbol))
+
 	// check status
 	if w.setting.loadUnitBuyAllowed() == uint64(w.stt.loadTotalUnitBought()) {
+		log.Sugar().Debug("flag1", w.setting.loadUnitBuyAllowed(), w.stt.loadTotalUnitBought())
+
 		return false
 	}
 
-	now := time.Now().Unix()
-	if now-int64(w.stt.loadLastBoughtAt()) <= c.StopBuyAfterBuy {
+	if time.Since(w.stt.loadLastBoughtAt()) <= c.StopBuyAfterBuy {
+		log.Sugar().Debug("flag2", time.Since(w.stt.loadHealth()).String())
+
 		return false
 	}
 
@@ -440,21 +460,31 @@ func (w *spotWorker) shouldBuy() bool {
 
 	currentTci := w.wavetrendProvider.GetCurrentTci(m1SvcName)
 	if currentTci > c.WavetrendOversold {
+		log.Sugar().Debug("flag3", currentTci)
+
 		return false
 	}
 
 	currentDifWt := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
 	if currentDifWt <= 0 {
+		log.Sugar().Debug("flag4", currentDifWt)
+
 		return false
 	}
 
 	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // get error
+		log.Sugar().Debug("flag5?")
+
 		return false
 	}
 
+	log.Sugar().Debugf("Value WT: %+v", pastWtDat)
+
 	for i := len(pastWtDat.PastTci) - c.OversoldRequiredTime; i < len(pastWtDat.PastTci); i++ {
 		if pastWtDat.PastTci[i] > c.WavetrendOversold {
+			log.Sugar().Debug("flag6", pastWtDat.PastTci[i], c.WavetrendOversold)
+
 			return false
 		}
 	}
@@ -462,14 +492,20 @@ func (w *spotWorker) shouldBuy() bool {
 	for i := len(pastWtDat.DifWavetrend) - c.OversoldNegativeDifWtRequiredTime - c.OversoldPositiveDifWtRequiredTime; i < len(pastWtDat.DifWavetrend); i++ {
 		if i < len(pastWtDat.DifWavetrend)-c.OversoldPositiveDifWtRequiredTime {
 			if pastWtDat.DifWavetrend[i] > 0 {
+				log.Sugar().Debug("flag7", pastWtDat.DifWavetrend[i])
+
 				return false
 			}
 		} else {
 			if pastWtDat.DifWavetrend[i] <= 0 {
+				log.Sugar().Debug("flag8", pastWtDat.DifWavetrend[i])
+
 				return false
 			}
 		}
 	}
+
+	log.Sugar().Debug("flag9")
 
 	return true
 }

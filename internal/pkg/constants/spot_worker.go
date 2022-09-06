@@ -15,7 +15,7 @@ const (
 	OverboughtNegativeDifWtRequiredTime = 2 // 2 minutes
 	OverboughtPositiveDifWtRequiredTime = 3 // 3 minutes
 
-	StopBuyAfterBuy = 120 // 120 seconds
+	StopBuyAfterBuy = 2 * time.Minute
 )
 
 const (
