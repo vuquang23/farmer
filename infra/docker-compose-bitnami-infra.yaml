@@ -6,14 +6,14 @@ networks:
 
 services:
   mysql:
-    image: 'mysql:latest'
+    image: 'bitnami/mysql:latest'
     container_name: mysql
     volumes:
-      - ./volumes/mysql/data:/var/lib/mysql
+      - ./volumes/bitnami_mysql/data:/bitnami/mysql/data
     environment:
       - MYSQL_ROOT_PASSWORD=123456
       - MYSQL_DATABASE=farmer
     networks:
       - farmer-app
     ports:
-      - "3306:3306"
+      - "3406:3306"

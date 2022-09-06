@@ -1,3 +1,6 @@
+bitnami-infra-up:
+	docker compose -f ./infra/docker-compose-bitnami-infra.yaml -p farmer up -d
+
 infra-up:
 	docker compose -f ./infra/docker-compose-infra.yaml -p farmer up -d
 
