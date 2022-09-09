@@ -80,6 +80,7 @@ func (w *spotWorker) sellSignalExceptions() (*en.SpotSellSignal, error) {
 					Qty:        b.Qty,
 					UnitBought: b.UnitBought,
 					Ref:        b.ID,
+					Price:      currentPrice,
 				})
 			}
 		} else {
@@ -114,6 +115,7 @@ func (w *spotWorker) sellSignalExceptions() (*en.SpotSellSignal, error) {
 					Qty:        b.Qty,
 					UnitBought: b.UnitBought,
 					Ref:        b.ID,
+					Price:      currentPrice,
 				})
 			}
 		}
@@ -152,6 +154,7 @@ func (w *spotWorker) analyzeWavetrendAndSell() {
 	}
 }
 
+// TODO: re-invest benefit = 3/5?
 func (w *spotWorker) createSellOrders(sSignal *en.SpotSellSignal) ([]*en.CreateSpotSellOrderResponse, error) {
 	log := logger.WithDescription(fmt.Sprintf("%s - Create Sell Order", w.setting.symbol))
 
@@ -165,12 +168,19 @@ func (w *spotWorker) createSellOrders(sSignal *en.SpotSellSignal) ([]*en.CreateS
 	for i := 0; i < 60; i, _ = i+1, <-ticker.C {
 		currentPrice := w.wavetrendProvider.GetClosePrice(m1SvcName)
 		// down price 0.05%
-		price := currentPrice * (1 - 0.05/100)
+		down := 0.05
+		price := currentPrice * (1 - down/100)
 
 		tempNotSold := []*en.SpotSellOrder{}
 		for _, order := range notSold {
+			if order.Price*(1-down*2/100) > price {
+				log.Sugar().Info("Current price is too low compared to expected. Expected: %f - Current: %f", order.Price, price)
+				tempNotSold = append(tempNotSold, order)
+				continue
+			}
+
 			log.Sugar().Infof(
-				"Try to sold with Qty: %s - Price: %f - Current Tci: %f - DifWavetrend: %f",
+				"Try to sell with Qty: %s - Price: %f - Current Tci: %f - DifWavetrend: %f",
 				order.Qty, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
 			)
 
@@ -178,7 +188,7 @@ func (w *spotWorker) createSellOrders(sSignal *en.SpotSellSignal) ([]*en.CreateS
 				w.bclient, w.setting.symbol, order.Qty,
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
 			); err == nil {
-				log.Sugar().Info(
+				log.Sugar().Infof(
 					"Sell successfully. Qty: %s - Price: %f - Ref: %d - Current Tci: %f - DifWavetrend: %f",
 					order.Qty, price, order.Ref, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
 				)
@@ -264,6 +274,7 @@ func (w *spotWorker) sellSignal() (*en.SpotSellSignal, error) {
 				Qty:        t.Qty,
 				UnitBought: t.UnitBought,
 				Ref:        t.ID,
+				Price:      currentPrice,
 			})
 		}
 	}
@@ -358,44 +369,43 @@ func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateO
 	log := logger.WithDescription(fmt.Sprintf("%s - Create Buy Order", w.setting.symbol))
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
-	// buy time lasts in 10 seconds
+	// buy time lasts in 20 seconds
 	ticker := time.NewTicker(time.Second)
-	for i := 0; i < 10; i, _ = i+1, <-ticker.C {
+	for i := 0; i < 20; i, _ = i+1, <-ticker.C {
 		currentPrice := w.wavetrendProvider.GetClosePrice(m1SvcName)
-		percentUp := 0.0
+		up := 0.05
+		price := currentPrice * (1 + up/100)
 
-		for j := 0; j < 5; j++ {
-			// up price
-			percentUp += 0.05
-			price := currentPrice * (1 + percentUp/100)
-			notional := w.setting.loadUnitNotional() * float64(bSignal.Order.UnitBought)
-			qty := notional / price
-			if notional < w.exchangeInf.loadMinNotional() || qty < w.exchangeInf.loadMinQty() {
-				log.Error("Not enough notional or qty")
-				continue
-			}
+		if (bSignal.Order.Price * (1 + (up*2)/100)) < price {
+			log.Sugar().Info("Current price is too high compared to expected. Expected: %f - Current: %f", bSignal.Order.Price, price)
+			continue
+		}
 
+		notional := w.setting.loadUnitNotional() * float64(bSignal.Order.UnitBought)
+		qty := notional / price
+		if notional < w.exchangeInf.loadMinNotional() || qty < w.exchangeInf.loadMinQty() {
+			log.Error("Not enough notional or qty")
+			continue
+		}
+
+		log.Sugar().Infof(
+			"Try to buy with Notional: %f - Price: %f - Current Tci: %f - Current difwavetrend: %f",
+			notional, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
+		)
+
+		if res, err := b.CreateSpotBuyOrder(
+			w.bclient, w.setting.symbol,
+			maths.RoundingUp(qty, w.exchangeInf.loadQtyPrecision()),
+			maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
+		); err == nil {
 			log.Sugar().Infof(
-				"Try to buy with Notional: %f - Price: %f - Current Tci: %f - Current difwavetrend: %f",
+				"Buy successfully. Notional: %f - Price: %f - Current Tci: %f - Current difwavetrend: %f",
 				notional, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
 			)
 
-			if res, err := b.CreateSpotBuyOrder(
-				w.bclient, w.setting.symbol,
-				maths.RoundingUp(qty, w.exchangeInf.loadQtyPrecision()),
-				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
-			); err == nil {
-				log.Sugar().Infof(
-					"Buy successfully. Notional: %f - Price: %f - Current Tci: %f - Current difwavetrend: %f",
-					notional, price, w.wavetrendProvider.GetCurrentTci(m1SvcName), w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName),
-				)
-
-				return res, nil
-			} else {
-				log.Sugar().Error(err)
-			}
-
-			time.Sleep(time.Second / 5)
+			return res, nil
+		} else {
+			log.Sugar().Error(err)
 		}
 	}
 
@@ -417,9 +427,13 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	}
 
+	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
 	return &en.SpotBuySignal{
 		ShouldBuy: true,
-		Order:     en.SpotBuyOrder{UnitBought: unitBought},
+		Order: en.SpotBuyOrder{
+			UnitBought: unitBought,
+			Price:      currentPrice,
+		},
 	}, nil
 }
 

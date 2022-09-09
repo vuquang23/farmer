@@ -67,7 +67,7 @@ func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pk
 			return nil, err
 		} else {
 			temp.QuoteAmount = temp.UnitNotional * (float64(temp.UnitBuyAllowed) - float64(temp.TotalUnitBought))
-			temp.CurrentUsdValue = temp.QuoteAmount + temp.BaseAmount*price
+			temp.CurrentUsdValue = temp.QuoteAmount + temp.BaseAmount*price + temp.UsdBenefit
 			temp.CurrentUsdValueChanged = temp.CurrentUsdValue - temp.UnitNotional*float64(temp.UnitBuyAllowed)
 		}
 

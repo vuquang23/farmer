@@ -5,6 +5,7 @@ import "github.com/adshao/go-binance/v2"
 type (
 	SpotBuyOrder struct {
 		UnitBought int64
+		Price      float64
 	}
 
 	SpotBuySignal struct {
@@ -18,6 +19,7 @@ type (
 		Qty        string
 		UnitBought uint64
 		Ref        uint64
+		Price      float64
 	}
 
 	SpotSellSignal struct {
