@@ -1,0 +1,17 @@
+version: "3.7"
+
+networks:
+  farmer-app:
+    driver: bridge
+
+
+services:
+  promtail:
+    image: 'grafana/promtail:2.0.0'
+    container_name: promtail
+    volumes:
+      - ./volumes/log:/tmp/log
+      - ./docker-config-log.yaml:/etc/promtail/docker-config.yaml
+    command: -config.file=/etc/promtail/docker-config.yaml
+    networks:
+      - farmer-app
