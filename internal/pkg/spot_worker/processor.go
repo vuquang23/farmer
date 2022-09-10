@@ -22,19 +22,22 @@ func (w *spotWorker) runMainProcessor() {
 
 	ticker := time.NewTicker(c.SleepAfterProcessing)
 	for ; !w.getStopSignal(); <-ticker.C {
-		// check if should buy
-		w.analyzeWavetrendAndBuy()
+		// // check if should buy
+		// w.analyzeWavetrendAndBuy()
 
-		// check if should sell with wavetrend
-		w.analyzeWavetrendAndSell()
+		// // check if should sell with wavetrend
+		// w.analyzeWavetrendAndSell()
 
-		// check if should sell with exception
-		w.analyzeExceptionsAndSell()
+		// // check if should sell with exception
+		// w.analyzeExceptionsAndSell()
 
-		// check health
-		if time.Since(w.stt.loadHealth()) > time.Minute*30 {
-			w.stt.storeHealth(time.Now())
-		}
+		// // check health
+		// if time.Since(w.stt.loadHealth()) > time.Minute*30 {
+		// 	w.stt.storeHealth(time.Now())
+		// }
+
+		log.Sugar().Info("TCI: ", w.wavetrendProvider.GetCurrentTci(wavetrendSvcName(w.setting.symbol, c.M1)))
+		log.Sugar().Info("Dif WT: ", w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.M1)))
 	}
 }
 
@@ -295,8 +298,13 @@ func (w *spotWorker) shouldSell() bool {
 		return false
 	}
 
-	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // error
+		return false
+	}
+
+	if isOutdated {
+		logger.Logger.Error("past wavetrend data is outdated")
 		return false
 	}
 
@@ -460,8 +468,13 @@ func (w *spotWorker) shouldBuy() bool {
 		return false
 	}
 
-	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // get error
+		return false
+	}
+
+	if isOutdated {
+		logger.Logger.Error("past wavetrend data is outdated")
 		return false
 	}
 

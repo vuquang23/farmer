@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/adshao/go-binance/v2"
 
 	c "farmer/internal/pkg/constants"
@@ -19,35 +21,40 @@ import (
 )
 
 type worker struct {
-	bclient     *binance.Client
-	mu          *sync.Mutex
-	symbol      string
-	timeFrame   string
-	pastData    *pastWavetrendData
-	currentData *currentWavetrendData
-	setting     *workerSetting
-	stopSignal  *uint32
+	bclient         *binance.Client
+	mu              *sync.Mutex
+	symbol          string
+	timeFrame       string
+	pastData        *pastWavetrendData
+	currentData     *currentWavetrendData
+	setting         *workerSetting
+	stopSignal      *uint32
+	klineMsgChan    <-chan *message.Message
+	cancelSubscribe context.CancelFunc
 }
 
-//NewWavetrendWorker calculates wavetrend base on svcName (eg: BTCUSDT-1h, ETHUSDT-1m)
-func NewWavetrendWorker(svcName string, bclient *binance.Client) IWavetrendWorker {
-	s := strings.Split(svcName, "-")
+//NewWavetrendWorker calculates wavetrend base on svcName (eg: BTCUSDT:1h, ETHUSDT:1m, future:BTCUSDT:1m)
+func NewWavetrendWorker(svcName string, bclient *binance.Client, klineMsgChan <-chan *message.Message, cancelSubscribe context.CancelFunc) IWavetrendWorker {
+	s := strings.Split(svcName, ":")
 	stopSignal := uint32(0)
 
 	return &worker{
-		bclient:     bclient,
-		mu:          &sync.Mutex{},
-		symbol:      s[0],
-		timeFrame:   s[1],
-		pastData:    newPastWavetrendData(),
-		currentData: newCurrentWavetrendData(),
-		setting:     newWorkerSetting(s[1]),
-		stopSignal:  &stopSignal,
+		bclient:         bclient,
+		mu:              &sync.Mutex{},
+		symbol:          s[0],
+		timeFrame:       s[1],
+		pastData:        newPastWavetrendData(),
+		currentData:     newCurrentWavetrendData(),
+		setting:         newWorkerSetting(s[1]),
+		stopSignal:      &stopSignal,
+		klineMsgChan:    klineMsgChan,
+		cancelSubscribe: cancelSubscribe,
 	}
 }
 
-func (w *worker) SetStopSignal() {
+func (w *worker) Stop() {
 	atomic.StoreUint32(w.stopSignal, 1)
+	w.cancelSubscribe()
 }
 
 func (w *worker) getStopSignal() bool {
@@ -66,9 +73,15 @@ func (w *worker) GetClosePrice() float64 {
 	return w.loadClosePrice()
 }
 
-func (w *worker) GetPastWaveTrendData() *entities.PastWavetrend {
+func (w *worker) GetPastWaveTrendData() (*entities.PastWavetrend, bool) {
 	ret := w.loadPastWaveTrendData()
-	return &ret
+
+	outDatedTime := w.setting.timeFrameUnixMili * 2
+	if uint64(time.Now().UnixMilli())-ret.LastOpenTime > outDatedTime {
+		return nil, true
+	}
+
+	return &ret, false
 }
 
 func (w *worker) Run(done chan<- error) {
@@ -80,9 +93,18 @@ func (w *worker) Run(done chan<- error) {
 	}
 
 	once := &sync.Once{}
-	ticker := time.NewTicker(w.setting.sleepAfterQuery)
 	periodMilis := w.setting.timeFrameUnixMili
-	for ; !w.getStopSignal(); <-ticker.C {
+	for !w.getStopSignal() {
+		// receive data from wavetrend provider
+		msg := <-w.klineMsgChan
+		msg.Ack()
+		currentCanle := binance.Kline{}
+		err := json.Unmarshal(msg.Payload, &currentCanle)
+		if err != nil {
+			log.Sugar().Error(err)
+			continue
+		}
+
 		// check whether now is new interval
 		lastOpenTime := w.loadLastOpenTime()
 		now := uint64(time.Now().UnixMilli())
@@ -97,28 +119,17 @@ func (w *worker) Run(done chan<- error) {
 			}
 		}
 
-		// get candle of current interval
-		candle, err := w.bclient.NewKlinesService().
-			Symbol(w.symbol).
-			Interval(w.timeFrame).
-			Limit(1).
-			Do(context.Background())
-		if err != nil {
-			log.Sugar().Error(err)
-			continue
-		}
-
 		// update wavetrend data
 		pastWavetrend := w.loadPastWaveTrendData()
 		currentTci, currentDifWavetrend := indicators.CalcCurrentTciAndDifWavetrend(
-			&pastWavetrend, indicators.SpotKlineToMinimalKline(candle),
+			&pastWavetrend, indicators.SpotKlineToMinimalKline([]*binance.Kline{&currentCanle}),
 			c.EmaLenN1, c.EmaLenN2, c.AvgPeriodLen,
 		)
 		w.storeCurrentTci(currentTci)
 		w.storeCurrentDifWavetrend(currentDifWavetrend)
 
 		// update price
-		closePrice, _ := strconv.ParseFloat(candle[0].Close, 64)
+		closePrice, _ := strconv.ParseFloat(currentCanle.Close, 64)
 		w.storeClosePrice(closePrice)
 
 		once.Do(func() {
