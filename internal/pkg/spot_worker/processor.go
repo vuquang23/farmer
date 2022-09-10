@@ -295,8 +295,13 @@ func (w *spotWorker) shouldSell() bool {
 		return false
 	}
 
-	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // error
+		return false
+	}
+
+	if isOutdated {
+		logger.Logger.Error("past wavetrend data is outdated")
 		return false
 	}
 
@@ -460,8 +465,13 @@ func (w *spotWorker) shouldBuy() bool {
 		return false
 	}
 
-	pastWtDat := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
 	if pastWtDat == nil { // get error
+		return false
+	}
+
+	if isOutdated {
+		logger.Logger.Error("past wavetrend data is outdated")
 		return false
 	}
 

@@ -14,7 +14,7 @@ type (
 	}
 
 	PastWavetrend struct {
-		LastOpenTime uint64
+		LastOpenTime uint64 // unix mili
 		LastD        float64
 		LastEsa      float64
 		PastTci      []float64

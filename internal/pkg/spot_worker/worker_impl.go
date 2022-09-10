@@ -88,5 +88,5 @@ func (w *spotWorker) Run(startC chan<- error) {
 }
 
 func wavetrendSvcName(symbol string, timeFrame string) string {
-	return fmt.Sprintf("%s-%s", symbol, timeFrame)
+	return fmt.Sprintf("%s:%s", symbol, timeFrame)
 }

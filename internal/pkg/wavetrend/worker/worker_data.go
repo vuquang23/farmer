@@ -5,7 +5,7 @@ import (
 )
 
 type pastWavetrendData struct {
-	lastOpenTime uint64
+	lastOpenTime uint64 // unix mili
 	lastD        float64
 	lastEsa      float64
 	pastTci      []float64
