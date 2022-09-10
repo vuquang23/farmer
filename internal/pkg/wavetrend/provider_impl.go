@@ -98,7 +98,7 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string) (chan struct{
 			CloseTime:                wsKline.EndTime,
 			QuoteAssetVolume:         wsKline.QuoteVolume,
 			TradeNum:                 wsKline.TradeNum,
-			TakerBuyBaseAssetVolume:  wsKline.ActiveBuyQuoteVolume,
+			TakerBuyBaseAssetVolume:  wsKline.ActiveBuyVolume,
 			TakerBuyQuoteAssetVolume: wsKline.ActiveBuyQuoteVolume,
 		}
 

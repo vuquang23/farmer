@@ -98,8 +98,8 @@ func (w *worker) Run(done chan<- error) {
 		// receive data from wavetrend provider
 		msg := <-w.klineMsgChan
 		msg.Ack()
-		currentCanle := binance.Kline{}
-		err := json.Unmarshal(msg.Payload, &currentCanle)
+		currentCandle := binance.Kline{}
+		err := json.Unmarshal(msg.Payload, &currentCandle)
 		if err != nil {
 			log.Sugar().Error(err)
 			continue
@@ -122,14 +122,14 @@ func (w *worker) Run(done chan<- error) {
 		// update wavetrend data
 		pastWavetrend := w.loadPastWaveTrendData()
 		currentTci, currentDifWavetrend := indicators.CalcCurrentTciAndDifWavetrend(
-			&pastWavetrend, indicators.SpotKlineToMinimalKline([]*binance.Kline{&currentCanle}),
+			&pastWavetrend, indicators.SpotKlineToMinimalKline([]*binance.Kline{&currentCandle}),
 			c.EmaLenN1, c.EmaLenN2, c.AvgPeriodLen,
 		)
 		w.storeCurrentTci(currentTci)
 		w.storeCurrentDifWavetrend(currentDifWavetrend)
 
 		// update price
-		closePrice, _ := strconv.ParseFloat(currentCanle.Close, 64)
+		closePrice, _ := strconv.ParseFloat(currentCandle.Close, 64)
 		w.storeClosePrice(closePrice)
 
 		once.Do(func() {
