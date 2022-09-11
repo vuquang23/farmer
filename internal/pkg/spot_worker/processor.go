@@ -419,6 +419,8 @@ func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateO
 }
 
 func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
+	log := logger.WithDescription(fmt.Sprintf("%s - Buy signal", w.setting.symbol))
+
 	var unitBought int64
 
 	shouldBuy := w.shouldBuy()
@@ -437,7 +439,7 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 		return nil, errors.New("remain 0 unit to buy")
 	}
 
-	logger.Logger.Sugar().Infof("[Buy Signal] Current h1DiffWt: %f - unitBought: %d", h1DiffWt, unitBought)
+	log.Sugar().Infof("Current h1DiffWt: %f - unitBought: %d", h1DiffWt, unitBought)
 
 	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
 	return &en.SpotBuySignal{
