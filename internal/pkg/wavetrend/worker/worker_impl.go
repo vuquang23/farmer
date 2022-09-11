@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -62,7 +63,14 @@ func (w *worker) getStopSignal() bool {
 }
 
 func (w *worker) GetCurrentTci() float64 {
-	return w.loadCurrentTci()
+	ret := w.loadCurrentTci()
+
+	// FIXME: handle this case.
+	if math.IsNaN(ret) {
+		panic("Tci is nan")
+	}
+
+	return ret
 }
 
 func (w *worker) GetCurrentDifWavetrend() float64 {
@@ -104,6 +112,7 @@ func (w *worker) Run(done chan<- error) {
 			log.Sugar().Error(err)
 			continue
 		}
+		log.Sugar().Debugf("Receive Candle: %+v\n", currentCandle)
 
 		// check whether now is new interval
 		lastOpenTime := w.loadLastOpenTime()
