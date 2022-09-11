@@ -1,6 +1,7 @@
 package spotworker
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -10,7 +11,7 @@ import (
 	b "farmer/internal/pkg/binance"
 	c "farmer/internal/pkg/constants"
 	en "farmer/internal/pkg/entities"
-	"farmer/internal/pkg/errors"
+	e "farmer/internal/pkg/errors"
 	"farmer/internal/pkg/utils/logger"
 	"farmer/internal/pkg/utils/maths"
 	pkgErr "farmer/pkg/errors"
@@ -174,7 +175,7 @@ func (w *spotWorker) createSellOrders(sSignal *en.SpotSellSignal) ([]*en.CreateS
 		tempNotSold := []*en.SpotSellOrder{}
 		for _, order := range notSold {
 			if order.Price*(1-down*2/100) > price {
-				log.Sugar().Info("Current price is too low compared to expected. Expected: %f - Current: %f", order.Price, price)
+				log.Sugar().Infof("Current price is too low compared to expected. Expected: %f - Current: %f", order.Price, price)
 				tempNotSold = append(tempNotSold, order)
 				continue
 			}
@@ -414,7 +415,7 @@ func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateO
 		}
 	}
 
-	return nil, errors.NewDomainErrorCreateBuyOrderFailed(nil)
+	return nil, e.NewDomainErrorCreateBuyOrderFailed(nil)
 }
 
 func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
@@ -431,6 +432,12 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 	} else {
 		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	}
+
+	if unitBought == 0 {
+		return nil, errors.New("remain 0 unit to buy")
+	}
+
+	logger.Logger.Sugar().Infof("[Buy Signal] Current h1DiffWt: %f - unitBought: %d", h1DiffWt, unitBought)
 
 	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
 	return &en.SpotBuySignal{
