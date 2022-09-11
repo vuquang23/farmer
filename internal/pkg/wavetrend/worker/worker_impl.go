@@ -63,14 +63,7 @@ func (w *worker) getStopSignal() bool {
 }
 
 func (w *worker) GetCurrentTci() float64 {
-	ret := w.loadCurrentTci()
-
-	// FIXME: handle this case.
-	if math.IsNaN(ret) {
-		panic("Tci is nan")
-	}
-
-	return ret
+	return w.loadCurrentTci()
 }
 
 func (w *worker) GetCurrentDifWavetrend() float64 {
@@ -112,7 +105,6 @@ func (w *worker) Run(done chan<- error) {
 			log.Sugar().Error(err)
 			continue
 		}
-		log.Sugar().Debugf("Receive Candle: %+v\n", currentCandle)
 
 		// check whether now is new interval
 		lastOpenTime := w.loadLastOpenTime()
@@ -136,6 +128,11 @@ func (w *worker) Run(done chan<- error) {
 		)
 		w.storeCurrentTci(currentTci)
 		w.storeCurrentDifWavetrend(currentDifWavetrend)
+
+		// FIXME: is this occurred?
+		if math.IsNaN(currentTci) || math.IsNaN(currentDifWavetrend) {
+			panic(fmt.Sprintf("[%s-%s] Current Tci: %f. Current Dif Wavetrend: %f", w.symbol, w.timeFrame, currentTci, currentDifWavetrend))
+		}
 
 		// update price
 		closePrice, _ := strconv.ParseFloat(currentCandle.Close, 64)
