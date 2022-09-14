@@ -141,20 +141,20 @@ func (p *wavetrendProvider) SetStopSignal(svcName string) {
 	}
 }
 
-func (p *wavetrendProvider) GetCurrentTci(svcName string) float64 {
+func (p *wavetrendProvider) GetCurrentTci(svcName string) (float64, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
 		return w.GetCurrentTci()
 	}
-	return 0
+	return 0, true
 }
 
-func (p *wavetrendProvider) GetCurrentDifWavetrend(svcName string) float64 {
+func (p *wavetrendProvider) GetCurrentDifWavetrend(svcName string) (float64, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
 		return w.GetCurrentDifWavetrend()
 	}
-	return 0
+	return 0, true
 }
 
 func (p *wavetrendProvider) GetClosePrice(svcName string) float64 {

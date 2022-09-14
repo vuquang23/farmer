@@ -62,12 +62,26 @@ func (w *worker) getStopSignal() bool {
 	return atomic.LoadUint32(w.stopSignal) > 0
 }
 
-func (w *worker) GetCurrentTci() float64 {
-	return w.loadCurrentTci()
+func (w *worker) GetCurrentTci() (float64, bool) {
+	currentTci, updatedAt := w.loadCurrentTciAndLastUpdatedAt()
+
+	outDatedTime := w.setting.timeFrameUnixMili
+	if time.Now().UnixMilli()-updatedAt.UnixMilli() > int64(outDatedTime) {
+		return 0, true
+	}
+
+	return currentTci, false
 }
 
-func (w *worker) GetCurrentDifWavetrend() float64 {
-	return w.loadCurrentDifWavetrend()
+func (w *worker) GetCurrentDifWavetrend() (float64, bool) {
+	difWavetrend, updatedAt := w.loadCurrentDifWavetrendAndLastUpdatedAt()
+
+	outDatedTime := w.setting.timeFrameUnixMili
+	if time.Now().UnixMilli()-updatedAt.UnixMilli() > int64(outDatedTime) {
+		return 0, true
+	}
+
+	return difWavetrend, false
 }
 
 func (w *worker) GetClosePrice() float64 {

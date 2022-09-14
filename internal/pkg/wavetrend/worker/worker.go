@@ -3,8 +3,8 @@ package worker
 import "farmer/internal/pkg/entities"
 
 type IWavetrendWorker interface {
-	GetCurrentTci() float64
-	GetCurrentDifWavetrend() float64
+	GetCurrentTci() (float64, bool)
+	GetCurrentDifWavetrend() (float64, bool)
 	GetClosePrice() float64
 	GetPastWaveTrendData() (*entities.PastWavetrend, bool)
 

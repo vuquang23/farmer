@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"time"
+
 	en "farmer/internal/pkg/entities"
 )
 
@@ -48,9 +50,11 @@ func (w *worker) loadPastWaveTrendData() en.PastWavetrend {
 }
 
 type currentWavetrendData struct {
-	currentTci          float64
-	currentDifWavetrend float64 // tci - average(tci, 4)
-	closePrice          float64
+	currentTci                       float64
+	currentTciLastUpdatedAt          time.Time
+	currentDifWavetrend              float64 // tci - average(tci, 4)
+	currentDifWavetrendLastUpdatedAt time.Time
+	closePrice                       float64
 }
 
 func newCurrentWavetrendData() *currentWavetrendData {
@@ -66,13 +70,14 @@ func (w *worker) storeCurrentTci(currentTci float64) {
 	defer w.mu.Unlock()
 
 	w.currentData.currentTci = currentTci
+	w.currentData.currentTciLastUpdatedAt = time.Now()
 }
 
-func (w *worker) loadCurrentTci() float64 {
+func (w *worker) loadCurrentTciAndLastUpdatedAt() (float64, time.Time) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	return w.currentData.currentTci
+	return w.currentData.currentTci, w.currentData.currentTciLastUpdatedAt
 }
 
 func (w *worker) storeCurrentDifWavetrend(value float64) {
@@ -80,13 +85,14 @@ func (w *worker) storeCurrentDifWavetrend(value float64) {
 	defer w.mu.Unlock()
 
 	w.currentData.currentDifWavetrend = value
+	w.currentData.currentDifWavetrendLastUpdatedAt = time.Now()
 }
 
-func (w *worker) loadCurrentDifWavetrend() float64 {
+func (w *worker) loadCurrentDifWavetrendAndLastUpdatedAt() (float64, time.Time) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	return w.currentData.currentDifWavetrend
+	return w.currentData.currentDifWavetrend, w.currentData.currentDifWavetrendLastUpdatedAt
 }
 
 func (w *worker) loadClosePrice() float64 {
