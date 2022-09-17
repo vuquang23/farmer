@@ -441,26 +441,15 @@ func (w *spotWorker) createBuyOrder(bSignal *en.SpotBuySignal) (*binance.CreateO
 }
 
 func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
-	log := logger.WithDescription(fmt.Sprintf("%s - Buy signal", w.setting.symbol))
-
-	var unitBought int64
-
 	shouldBuy := w.shouldBuy()
 	if !shouldBuy {
 		return &en.SpotBuySignal{ShouldBuy: false}, nil
 	}
 
-	h1DifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.H1))
-	if isOutdated {
-		return nil, errors.New("h1DifWt is outdated")
+	unitBought, err := w.determineUnitNumberToBuy()
+	if err != nil {
+		return nil, err
 	}
-	if h1DifWt <= 0 {
-		unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
-	} else {
-		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
-	}
-
-	log.Sugar().Infof("Current h1DifWt: %f - unitBought: %d", h1DifWt, unitBought)
 
 	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
 	return &en.SpotBuySignal{
@@ -470,6 +459,39 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 			Price:      currentPrice,
 		},
 	}, nil
+}
+
+func (w *spotWorker) determineUnitNumberToBuy() (int64, error) {
+	var (
+		isUptrend  bool
+		unitBought int64
+
+		h1SvcName = wavetrendSvcName(w.setting.symbol, c.H1)
+		log       = logger.WithDescription(fmt.Sprintf("%s Determine unit to buy", w.setting.symbol))
+	)
+
+	pastWt, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(h1SvcName)
+	if isOutdated {
+		return 0, errors.New("h1DifWt is outdated")
+	}
+
+	isUptrend = true
+	for i := len(pastWt.DifWavetrend) - c.IsUptrendOnH1RequiredTime; i < len(pastWt.DifWavetrend); i++ {
+		if pastWt.DifWavetrend[i] <= 0 {
+			isUptrend = false
+			break
+		}
+	}
+
+	if isUptrend {
+		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
+	} else {
+		unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
+	}
+
+	log.Sugar().Infof("Current h1DifWt slice: %v - unitBought: %d", pastWt.DifWavetrend[len(pastWt.DifWavetrend)-3:], unitBought)
+
+	return unitBought, nil
 }
 
 func (w *spotWorker) shouldBuy() bool {

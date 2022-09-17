@@ -16,6 +16,8 @@ const (
 	OverboughtPositiveDifWtRequiredTime = 3 // 3 minutes
 
 	StopBuyAfterBuy = 2 * time.Minute
+
+	IsUptrendOnH1RequiredTime = 3 // 3 hours
 )
 
 const (
