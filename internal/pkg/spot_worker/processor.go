@@ -244,7 +244,7 @@ func (w *spotWorker) afterSell(res []*en.CreateSpotSellOrderResponse) error {
 		})
 	}
 
-	w.stt.updateTotalUnitBought(int64(updateUnitBought))
+	w.stt.updateTotalUnitBought(-int64(updateUnitBought))
 
 	if err := w.spotTradeRepo.UpdateBuyOrders(buyIDs); err != nil {
 		log.Sugar().Error(err)
@@ -275,6 +275,11 @@ func (w *spotWorker) sellSignal() (*en.SpotSellSignal, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if len(trades) == 0 {
+		return &en.SpotSellSignal{ShouldSell: false}, nil
+	}
+
 	for _, t := range trades {
 		if t.Price*(1+c.MinBenefit/100) <= currentPrice { // min benefit is 0.5%
 			ret.Orders = append(ret.Orders, &en.SpotSellOrder{
@@ -366,7 +371,7 @@ func (w *spotWorker) analyzeWavetrendAndBuy() {
 func (w *spotWorker) afterBuy(res *binance.CreateOrderResponse, unitBought int64) {
 	log := logger.WithDescription(fmt.Sprintf("%s - After Buy", w.setting.symbol))
 
-	w.stt.updateTotalUnitBought(-unitBought)
+	w.stt.updateTotalUnitBought(unitBought)
 	w.stt.storeLastBoughtAt(time.Now())
 
 	// update DB
@@ -453,10 +458,6 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 		unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	} else {
 		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
-	}
-
-	if unitBought == 0 {
-		return nil, errors.New("remain 0 unit to buy")
 	}
 
 	log.Sugar().Infof("Current h1DifWt: %f - unitBought: %d", h1DifWt, unitBought)

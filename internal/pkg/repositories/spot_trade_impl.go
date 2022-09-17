@@ -30,7 +30,7 @@ func SpotTradeRepositoryInstance() ISpotTradeRepository {
 func (r *spotTradeRepository) GetNotDoneBuyOrdersByWorkerID(workerID uint64) ([]*entities.SpotTrade, *pkgErr.InfraError) {
 	ret := []*entities.SpotTrade{}
 
-	if err := r.db.Where("spot_worker_id = ? AND SIDE = ? AND is_done = ?", workerID, "BUY", false).Find(&ret).Error; err != nil {
+	if err := r.db.Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).Find(&ret).Error; err != nil {
 		return nil, pkgErr.NewInfraErrorDBSelect(err)
 	}
 
