@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
@@ -20,8 +22,9 @@ import (
 
 type wavetrendProvider struct {
 	mapSymbolWorker     map[string]w.IWavetrendWorker
-	mapSymbolDoneWsChan map[string]chan<- struct{}
-	klineChannel        *gochannel.GoChannel
+	mapSymbolStopWsChan map[string]chan<- struct{}
+
+	klineChannel *gochannel.GoChannel
 }
 
 var provider *wavetrendProvider
@@ -30,7 +33,7 @@ func InitWavetrendProvider() {
 	if provider == nil {
 		provider = &wavetrendProvider{
 			mapSymbolWorker:     make(map[string]w.IWavetrendWorker),
-			mapSymbolDoneWsChan: make(map[string]chan<- struct{}),
+			mapSymbolStopWsChan: make(map[string]chan<- struct{}),
 			klineChannel: gochannel.NewGoChannel(gochannel.Config{
 				OutputChannelBuffer:            50,
 				Persistent:                     false,
@@ -53,11 +56,14 @@ func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
 	}
 
 	// init ws to receive realtime data from binance and push data to wavetrend worker
-	doneC, err := p.startKlineWSConnection(svcName)
-	if err != nil {
+
+	stopConnC := make(chan struct{})
+	initC := make(chan error)
+	go p.startKlineWSConnection(svcName, initC, stopConnC)
+	if err := <-initC; err != nil {
 		return errPkg.NewDomainErrorUnknown(err)
 	}
-	p.mapSymbolDoneWsChan[svcName] = doneC
+	p.mapSymbolStopWsChan[svcName] = stopConnC
 
 	// wavetrend worker subscribe to receive kline data from wavetrend provider
 	ctx, cancel := context.WithCancel(context.Background())
@@ -78,13 +84,18 @@ func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
 	return nil
 }
 
-func (p *wavetrendProvider) startKlineWSConnection(svcName string) (chan struct{}, error) {
+func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- error, stopConnC chan struct{}) {
+	log := logger.WithDescription(fmt.Sprintf("%s - Start WS Connection", svcName))
 	strs := strings.Split(svcName, ":")
 
 	// TODO: case future.
 	if len(strs) > 2 {
-		return nil, errors.New("future is not supported now")
+		initC <- errors.New("future is not supported now")
+		return
 	}
+
+	symbol := strs[0]
+	timeFrame := strs[1]
 
 	var handler = func(event *binance.WsKlineEvent) {
 		wsKline := event.Kline
@@ -104,29 +115,45 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string) (chan struct{
 
 		marshedPayload, err := json.Marshal(kline)
 		if err != nil {
-			logger.Logger.Sugar().Error(err)
+			log.Sugar().Error(err)
 			return
 		}
 
 		if err := p.klineChannel.Publish(svcName, &message.Message{
 			Payload: marshedPayload,
 		}); err != nil {
-			logger.Logger.Sugar().Error(err)
+			log.Sugar().Error(err)
 		}
 	}
 
+	resetC := make(chan struct{})
 	var errHandler = func(err error) {
-		logger.Logger.Sugar().Error(err)
+		log.Sugar().Error(err)
+
+		resetC <- struct{}{}
 	}
 
-	symbol := strs[0]
-	timeFrame := strs[1]
-	doneC, _, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
-	if err != nil {
-		return nil, err
-	}
+	once := &sync.Once{}
+	for {
+		_, stopC, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
+		if err != nil {
+			log.Sugar().Error()
+			stopC <- struct{}{}
+			continue
+		}
 
-	return doneC, nil
+		once.Do(func() {
+			initC <- nil
+		})
+
+		// polling
+		select {
+		case <-stopConnC:
+			return
+		case <-resetC:
+			stopC <- struct{}{}
+		}
+	}
 }
 
 func (p *wavetrendProvider) SetStopSignal(svcName string) {
@@ -136,8 +163,8 @@ func (p *wavetrendProvider) SetStopSignal(svcName string) {
 		w.Stop()
 
 		// unscribe to ws
-		doneC := p.mapSymbolDoneWsChan[svcName]
-		doneC <- struct{}{}
+		stopConnC := p.mapSymbolStopWsChan[svcName]
+		stopConnC <- struct{}{}
 	}
 }
 
