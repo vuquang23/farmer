@@ -56,9 +56,8 @@ func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
 	}
 
 	// init ws to receive realtime data from binance and push data to wavetrend worker
-
-	stopConnC := make(chan struct{})
 	initC := make(chan error)
+	stopConnC := make(chan struct{})
 	go p.startKlineWSConnection(svcName, initC, stopConnC)
 	if err := <-initC; err != nil {
 		return errPkg.NewDomainErrorUnknown(err)

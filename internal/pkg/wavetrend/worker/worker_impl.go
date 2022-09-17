@@ -145,7 +145,8 @@ func (w *worker) Run(done chan<- error) {
 
 		// FIXME: is this occurred?
 		if math.IsNaN(currentTci) || math.IsNaN(currentDifWavetrend) {
-			panic(fmt.Sprintf("[%s-%s] Current Tci: %f. Current Dif Wavetrend: %f", w.symbol, w.timeFrame, currentTci, currentDifWavetrend))
+			log.Sugar().Errorf("pastWavetrend: %+v - currentTci: %f. currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
+			panic("NaN error")
 		}
 
 		// update price
@@ -187,6 +188,9 @@ func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint6
 }
 
 func (w *worker) initWaveTrendPastData() error {
+	log := logger.WithDescription(fmt.Sprintf("[%s-%s] Init wavetrend past data", w.symbol, w.timeFrame))
+	log.Info("Begin func")
+
 	interval := w.timeFrame
 
 	candles, err := w.bclient.NewKlinesService().
@@ -205,5 +209,7 @@ func (w *worker) initWaveTrendPastData() error {
 	)
 
 	w.storePastWaveTrendData(*pastWavetrend)
+
+	log.Info("Done func")
 	return nil
 }

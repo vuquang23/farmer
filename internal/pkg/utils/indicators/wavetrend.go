@@ -32,6 +32,13 @@ func CalcPastWavetrendData(
 
 	ci := []float64{}
 	for i := 0; i < len(d); i++ {
+		// FIXME: d can be zero?
+		// if d[i] == 0 {
+		// 	for _, c := range candles {
+		// 		logger.Logger.Sugar().Infof("%+v", c)
+		// 	}
+		// 	panic("d is zero")
+		// }
 		ci = append(ci, (ap[i]-esa[i])/(0.015*d[i]))
 	}
 
