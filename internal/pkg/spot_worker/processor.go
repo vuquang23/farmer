@@ -450,6 +450,9 @@ func (w *spotWorker) buySignal() (*en.SpotBuySignal, error) {
 	if err != nil {
 		return nil, err
 	}
+	if unitBought <= 0 {
+		return &en.SpotBuySignal{ShouldBuy: false}, nil
+	}
 
 	currentPrice := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
 	return &en.SpotBuySignal{
@@ -486,7 +489,9 @@ func (w *spotWorker) determineUnitNumberToBuy() (int64, error) {
 	if isUptrend {
 		unitBought = int64(math.Min(c.UnitBuyOnUpTrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	} else {
-		unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
+		// TODO: not buy when downtrend 1h?
+		// unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
+		unitBought = 0
 	}
 
 	log.Sugar().Infof("Current h1DifWt slice: %v - unitBought: %d", pastWt.DifWavetrend[len(pastWt.DifWavetrend)-3:], unitBought)

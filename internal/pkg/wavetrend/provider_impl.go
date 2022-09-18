@@ -134,6 +134,8 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 
 	once := &sync.Once{}
 	for {
+		log.Debug("Connect WS Kline")
+
 		_, stopC, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
 		if err != nil {
 			log.Sugar().Error()
@@ -153,7 +155,7 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 			stopC <- struct{}{}
 		}
 
-		log.Info("Reset Kline WS Connection")
+		log.Debug("Reset Kline WS Connection")
 	}
 }
 

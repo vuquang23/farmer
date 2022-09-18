@@ -189,7 +189,7 @@ func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint6
 
 func (w *worker) initWaveTrendPastData() error {
 	log := logger.WithDescription(fmt.Sprintf("[%s-%s] Init wavetrend past data", w.symbol, w.timeFrame))
-	log.Info("Begin func")
+	log.Debug("Begin func")
 
 	interval := w.timeFrame
 
@@ -210,6 +210,6 @@ func (w *worker) initWaveTrendPastData() error {
 
 	w.storePastWaveTrendData(*pastWavetrend)
 
-	log.Info("Done func")
+	log.Debug("End func")
 	return nil
 }
