@@ -152,6 +152,8 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 		case <-resetC:
 			stopC <- struct{}{}
 		}
+
+		log.Info("Reset Kline WS Connection")
 	}
 }
 
