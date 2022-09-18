@@ -17,7 +17,7 @@ const (
 
 	StopBuyAfterBuy = 2 * time.Minute
 
-	IsUptrendOnH1RequiredTime = 3 // 3 hours
+	IsUptrendOnH1RequiredTime = 2 // 2 hours
 )
 
 const (
