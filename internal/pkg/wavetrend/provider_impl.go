@@ -147,11 +147,15 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 			initC <- nil
 		})
 
+		log.Debug("Begin polling...")
+
 		// polling
 		select {
 		case <-stopConnC:
+			log.Debug("In stopConnC...")
 			return
 		case <-resetC:
+			log.Debug("In resetC...")
 			stopC <- struct{}{}
 		}
 
