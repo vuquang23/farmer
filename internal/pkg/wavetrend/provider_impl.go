@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
@@ -125,21 +126,17 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 		}
 	}
 
-	resetC := make(chan struct{})
 	var errHandler = func(err error) {
 		log.Sugar().Error(err)
-
-		resetC <- struct{}{}
 	}
 
 	once := &sync.Once{}
 	for {
 		log.Debug("Connect WS Kline")
 
-		_, stopC, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
+		doneC, stopC, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
 		if err != nil {
 			log.Sugar().Error()
-			stopC <- struct{}{}
 			continue
 		}
 
@@ -153,11 +150,11 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 		select {
 		case <-stopConnC:
 			log.Debug("In stopConnC...")
-			return
-		case <-resetC:
-			log.Debug("In resetC: before stopC <- struct{}{}")
 			stopC <- struct{}{}
-			log.Debug("In resetC: after stopC <- struct{}{}")
+			return
+		case <-doneC:
+			log.Debug("In doneC...")
+			time.Sleep(2 * time.Second)
 		}
 
 		log.Debug("Reset Kline WS Connection")
