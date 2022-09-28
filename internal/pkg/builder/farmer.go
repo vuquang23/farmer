@@ -23,8 +23,6 @@ type spotFarmerSystem struct {
 	t      telebot.ITeleBot
 }
 
-var sys *spotFarmerSystem
-
 func NewSpotFarmerSystem(m spotmanager.ISpotManager, t telebot.ITeleBot) (ISpotFarmerSystem, error) {
 	server, err := newServer()
 	if err != nil {
@@ -32,12 +30,11 @@ func NewSpotFarmerSystem(m spotmanager.ISpotManager, t telebot.ITeleBot) (ISpotF
 	}
 	api.AddRouterV1(server)
 
-	sys = &spotFarmerSystem{
+	return &spotFarmerSystem{
 		server: server,
 		m:      m,
 		t:      t,
-	}
-	return sys, nil
+	}, nil
 }
 
 func (sys *spotFarmerSystem) Run() error {

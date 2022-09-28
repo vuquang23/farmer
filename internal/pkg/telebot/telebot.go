@@ -73,7 +73,7 @@ func (ltb *teleBot) SendMsg(msg interface{}) {
 	for i := 0; i < 3; i++ {
 		_, err := ltb.bot.Send(ltb.group, msg)
 		if err != nil {
-			log.Sugar().Info("failed to send message tele - ", "attempt", i, " - err", err)
+			log.Sugar().Info("Failed to send message tele - ", "attempt", i, " - err", err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
