@@ -58,7 +58,7 @@ func (w *spotWorker) SetWorkerSettingAndStatus(s entities.SpotWorkerStatus) erro
 func (w *spotWorker) SetStopSignal() {
 	atomic.StoreUint32(w.stopSignal, 1)
 
-	// pass signal to providers
+	// pass signal to wavetrend providers
 	for _, timeFrame := range w.wavetrendTimeFrames {
 		w.wavetrendProvider.SetStopSignal(wavetrendSvcName(w.setting.symbol, timeFrame))
 	}

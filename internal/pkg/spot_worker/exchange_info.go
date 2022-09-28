@@ -55,5 +55,5 @@ func (e *exchangeInfo) loadMinNotional() float64 {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	return e.minQty
+	return e.minNotional
 }

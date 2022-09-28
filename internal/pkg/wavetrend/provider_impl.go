@@ -202,5 +202,5 @@ func (p *wavetrendProvider) GetPastWaveTrendData(svcName string) (*entities.Past
 	if ok {
 		return w.GetPastWaveTrendData()
 	}
-	return nil, false
+	return nil, true
 }
