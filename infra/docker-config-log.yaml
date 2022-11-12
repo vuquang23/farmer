@@ -15,4 +15,4 @@ scrape_configs:
           - localhost
         labels:
           job: sfarmer
-          __path__: /tmp/log/sfarmer.log
+          __path__: /tmp/log/sfarmer_log.txt
