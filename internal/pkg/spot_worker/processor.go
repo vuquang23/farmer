@@ -525,7 +525,7 @@ func (w *spotWorker) determineUnitNumberToBuy(ctx context.Context) (int64, error
 		unitBought = int64(math.Min(c.UnitBuyOnDowntrend, float64(w.setting.loadUnitBuyAllowed())-float64(w.stt.loadTotalUnitBought())))
 	}
 
-	logger.Infof(ctx, "[determineUnitNumberToBuy] current h1DifWt slice: %v - unitBought: %d", pastWt.DifWavetrend[len(pastWt.DifWavetrend)-c.IsUptrendOnH1RequiredTime-1:], unitBought)
+	logger.Infof(ctx, "[determineUnitNumberToBuy] current h1DifWt slice: %v | unitBought: %d", pastWt.DifWavetrend[len(pastWt.DifWavetrend)-c.IsUptrendOnH1RequiredTime-1:], unitBought)
 
 	return unitBought, nil
 }

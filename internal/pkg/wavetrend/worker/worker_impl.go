@@ -142,7 +142,7 @@ func (w *worker) Run(ctx context.Context, done chan<- error) {
 
 		// FIXME: is this occurred?
 		if math.IsNaN(currentTci) || math.IsNaN(currentDifWavetrend) {
-			logger.Errorf(ctx, "pastWavetrend: %+v - currentTci: %f. currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
+			logger.Errorf(ctx, "pastWavetrend: %+v | currentTci: %f | currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
 			panic("NaN error")
 		}
 

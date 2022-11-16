@@ -29,12 +29,10 @@ type handlerFunc func(c tb.Context)
 
 // TeleBot ...
 type teleBot struct {
-	bot   *tb.Bot
-	group *tb.Chat
-
+	bot          *tb.Bot
+	group        *tb.Chat
 	spotTradeSvc services.ISpotTradeService
-
-	m map[string]handlerFunc
+	m            map[string]handlerFunc
 }
 
 var tlbot *teleBot
