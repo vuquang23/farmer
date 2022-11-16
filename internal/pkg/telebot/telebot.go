@@ -71,9 +71,9 @@ func InitTeleBot(spotTradeSvc services.ISpotTradeService) error {
 }
 
 // Run runs bot
-func (tlb *teleBot) Run(ctx context.Context) {
+func (t *teleBot) Run(ctx context.Context) {
 	logger.Info(ctx, "[Run] start telebot")
-	tlb.bot.Start()
+	t.bot.Start()
 }
 
 // SendMsg sending a message to master
@@ -90,8 +90,8 @@ func (ltb *teleBot) SendMsg(ctx context.Context, msg interface{}) {
 }
 
 // SendMsgWithFormat sending a message with format to master
-func (ltb *teleBot) SendMsgWithFormat(ctx context.Context, template string, params ...interface{}) {
-	ltb.SendMsg(ctx, fmt.Sprintf(template, params...))
+func (t *teleBot) SendMsgWithFormat(ctx context.Context, template string, params ...interface{}) {
+	t.SendMsg(ctx, fmt.Sprintf(template, params...))
 }
 
 func (t *teleBot) setupRoute() {
