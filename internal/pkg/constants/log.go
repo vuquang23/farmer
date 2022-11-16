@@ -2,5 +2,5 @@ package constants
 
 const (
 	CtxLoggerKey      = "CtxLoggerKey"
-	CtxDescriptionKey = "CtxDescriptionKey"
+	CtxDescriptionKey = "Desc"
 )
