@@ -1,11 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
@@ -17,19 +17,19 @@ import (
 	"farmer/internal/pkg/services"
 	spotmanager "farmer/internal/pkg/spot_manager"
 	"farmer/internal/pkg/telebot"
-	"farmer/internal/pkg/utils/logger"
 	_ "farmer/pkg/errors"
 )
 
 func main() {
 	app := &cli.App{
-		Name:     "My Farmer",
-		Commands: []*cli.Command{},
+		Name: "My Farmer",
+		Commands: []*cli.Command{
+			spotFarmerCommand(),
+			migrationCommand(),
+			updateSymbolListCommand(),
+			calcWavetrendMomentumCommand(),
+		},
 	}
-	app.Commands = append(app.Commands, spotFarmerCommand())
-	app.Commands = append(app.Commands, migrationCommand())
-	app.Commands = append(app.Commands, updateSymbolListCommand())
-	app.Commands = append(app.Commands, calcWavetrendMomentumCommand())
 
 	err := app.Run(os.Args)
 	if err != nil {
@@ -136,10 +136,7 @@ func updateSymbolListCommand() *cli.Command {
 
 			updater := builder.NewSymlistUpdater()
 
-			updaterCtx := new(gin.Context)
-			logger.BindLoggerToGinNormCtx(updaterCtx, "Symlist updater")
-
-			if err := updater.Run(updaterCtx, "files/symbol.txt"); err != nil {
+			if err := updater.Run(context.Background(), "files/symbol.txt"); err != nil {
 				return err
 			}
 			return nil
@@ -184,11 +181,9 @@ func calcWavetrendMomentumCommand() *cli.Command {
 			calculator := builder.NewWaveTrendCalculator(
 				services.WaveTrendMomentumServiceInstance(),
 			)
-			calculatorCtx := new(gin.Context)
-			logger.BindLoggerToGinNormCtx(calculatorCtx, "Wavetrend calculator")
 
 			err = calculator.Run(
-				calculatorCtx, enum.Market(ctx.String(marketFlag)),
+				context.Background(), enum.Market(ctx.String(marketFlag)),
 				ctx.String(intervalFlag), ctx.String(symlistFlag), resultFile,
 			)
 			if err != nil {

@@ -18,8 +18,8 @@ type (
 	SpotSellOrder struct {
 		Qty        string
 		UnitBought uint64
-		Ref        uint64
 		Price      float64
+		Ref        *SpotTrade
 	}
 
 	SpotSellSignal struct {

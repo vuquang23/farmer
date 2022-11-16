@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/gin-gonic/gin"
+	"context"
 
 	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/enum"
@@ -9,5 +9,5 @@ import (
 )
 
 type IWavetrendMomentumService interface {
-	Calculate(ctx *gin.Context, market enum.Market, symbolList []string, interval string) ([]*entities.WavetrendMomentum, *errors.DomainError)
+	Calculate(ctx context.Context, market enum.Market, symbolList []string, interval string) ([]*entities.WavetrendMomentum, *errors.DomainError)
 }

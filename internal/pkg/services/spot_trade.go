@@ -1,10 +1,12 @@
 package services
 
 import (
+	"context"
+
 	"farmer/internal/pkg/entities"
 	pkgErr "farmer/pkg/errors"
 )
 
 type ISpotTradeService interface {
-	GetTradingPairsInfo() ([]*entities.SpotTradingPairInfo, *pkgErr.DomainError)
+	GetTradingPairsInfo(ctx context.Context) ([]*entities.SpotTradingPairInfo, *pkgErr.DomainError)
 }

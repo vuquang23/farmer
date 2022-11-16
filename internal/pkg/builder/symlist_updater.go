@@ -4,14 +4,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/gin-gonic/gin"
-
 	"farmer/internal/pkg/binance"
 	"farmer/internal/pkg/utils/logger"
 )
 
 type ISymlistUpdater interface {
-	Run(ctx *gin.Context, filePath string) error
+	Run(ctx context.Context, filePath string) error
 }
 
 type symlistUpdater struct{}
@@ -22,7 +20,7 @@ func NewSymlistUpdater() ISymlistUpdater {
 
 // Run update symbol list to file.
 // Simple logic so not need to split to service or repo.
-func (updater *symlistUpdater) Run(ctx *gin.Context, filePath string) error {
+func (updater *symlistUpdater) Run(ctx context.Context, filePath string) error {
 	fo, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -42,13 +40,13 @@ func (updater *symlistUpdater) Run(ctx *gin.Context, filePath string) error {
 			Interval("1d").Limit(1).
 			Do(context.Background())
 		if err != nil {
-			logger.FromGinCtx(ctx).Error(err.Error())
+			logger.Error(ctx, err)
 			continue
 		}
 		fo.Write([]byte(coin.Coin + "\n"))
 	}
 
-	logger.FromGinCtx(ctx).Info("update symbol list successfully")
+	logger.Info(ctx, "[Run] update symbol list successfully")
 
 	return nil
 }

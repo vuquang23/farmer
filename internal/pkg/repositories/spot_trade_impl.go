@@ -1,11 +1,13 @@
 package repositories
 
 import (
+	"context"
 	"time"
 
 	"gorm.io/gorm"
 
 	"farmer/internal/pkg/entities"
+	"farmer/internal/pkg/utils/logger"
 	pkgErr "farmer/pkg/errors"
 )
 
@@ -27,27 +29,30 @@ func SpotTradeRepositoryInstance() ISpotTradeRepository {
 	return spotTradeRepo
 }
 
-func (r *spotTradeRepository) GetNotDoneBuyOrdersByWorkerID(workerID uint64) ([]*entities.SpotTrade, *pkgErr.InfraError) {
+func (r *spotTradeRepository) GetNotDoneBuyOrdersByWorkerID(ctx context.Context, workerID uint64) ([]*entities.SpotTrade, *pkgErr.InfraError) {
 	ret := []*entities.SpotTrade{}
 
 	if err := r.db.Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).Find(&ret).Error; err != nil {
+		logger.Error(ctx, err)
 		return nil, pkgErr.NewInfraErrorDBSelect(err)
 	}
 
 	return ret, nil
 }
 
-func (r *spotTradeRepository) CreateBuyOrder(spotTrade entities.SpotTrade) *pkgErr.InfraError {
+func (r *spotTradeRepository) CreateBuyOrder(ctx context.Context, spotTrade entities.SpotTrade) *pkgErr.InfraError {
 	if err := r.db.Create(&spotTrade).Error; err != nil {
+		logger.Error(ctx, err)
 		return pkgErr.NewInfraErrorDBInsert(err)
 	}
 
 	return nil
 }
 
-func (r *spotTradeRepository) CreateSellOrders(spotTrades []*entities.SpotTrade) *pkgErr.InfraError {
+func (r *spotTradeRepository) CreateSellOrders(ctx context.Context, spotTrades []*entities.SpotTrade) *pkgErr.InfraError {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.CreateInBatches(&spotTrades, 100).Error; err != nil {
+			logger.Error(ctx, err)
 			return pkgErr.NewInfraErrorDBInsert(err)
 		}
 
@@ -57,6 +62,7 @@ func (r *spotTradeRepository) CreateSellOrders(spotTrades []*entities.SpotTrade)
 		}
 
 		if err := tx.Table("spot_trades").Where("id IN ?", buyOrderIDs).Update("is_done", true).Error; err != nil {
+			logger.Error(ctx, err)
 			return pkgErr.NewInfraErrorDBUpdate(err)
 		}
 

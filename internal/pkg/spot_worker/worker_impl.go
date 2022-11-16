@@ -1,6 +1,7 @@
 package spotworker
 
 import (
+	"context"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -22,12 +23,14 @@ type spotWorker struct {
 	wavetrendTimeFrames []string
 	stt                 *status
 	spotTradeRepo       repositories.ISpotTradeRepository
+	spotWorkerRepo      repositories.ISpotWorkerRepository
 }
 
 func NewSpotWorker(
 	ID uint64, bclient *binance.Client,
 	wavetrendProvider wt.IWavetrendProvider,
 	spotTradeRepo repositories.ISpotTradeRepository,
+	spotWorkerRepo repositories.ISpotWorkerRepository,
 ) ISpotWorker {
 	stopSignal := uint32(0)
 
@@ -41,6 +44,7 @@ func NewSpotWorker(
 		wavetrendTimeFrames: []string{"1m", "1h"},
 		stt:                 newStatus(),
 		spotTradeRepo:       spotTradeRepo,
+		spotWorkerRepo:      spotWorkerRepo,
 	}
 }
 
@@ -72,10 +76,10 @@ func (w *spotWorker) getStopSignal() bool {
 	return atomic.LoadUint32(w.stopSignal) > 0
 }
 
-func (w *spotWorker) Run(startC chan<- error) {
+func (w *spotWorker) Run(ctx context.Context, startC chan<- error) {
 	for _, timeFrame := range w.wavetrendTimeFrames {
 		if err := w.wavetrendProvider.StartService(
-			wavetrendSvcName(w.setting.symbol, timeFrame),
+			ctx, wavetrendSvcName(w.setting.symbol, timeFrame),
 		); err != nil {
 			startC <- err
 			return
@@ -84,7 +88,7 @@ func (w *spotWorker) Run(startC chan<- error) {
 
 	startC <- nil
 
-	w.runMainProcessor()
+	w.runMainProcessor(ctx)
 }
 
 func wavetrendSvcName(symbol string, timeFrame string) string {

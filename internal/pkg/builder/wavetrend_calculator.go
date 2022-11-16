@@ -2,11 +2,10 @@ package builder
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 
 	"farmer/internal/pkg/enum"
 	"farmer/internal/pkg/services"
@@ -14,7 +13,7 @@ import (
 )
 
 type IWaveTrendCalculator interface {
-	Run(ctx *gin.Context, market enum.Market, interval string, symlistFilePath string, resultFilePath string) error
+	Run(ctx context.Context, market enum.Market, interval string, symlistFilePath string, resultFilePath string) error
 }
 
 type waveTrendCalculator struct {
@@ -28,7 +27,7 @@ func NewWaveTrendCalculator(wtMomentumSvc services.IWavetrendMomentumService) IW
 }
 
 func (w *waveTrendCalculator) Run(
-	ctx *gin.Context, market enum.Market, interval string, symlistFilePath string, resultFilePath string,
+	ctx context.Context, market enum.Market, interval string, symlistFilePath string, resultFilePath string,
 ) error {
 	fi, err := os.Open(symlistFilePath)
 	if err != nil {
@@ -60,6 +59,6 @@ func (w *waveTrendCalculator) Run(
 		))
 	}
 
-	logger.FromGinCtx(ctx).Sugar().Infof("calculated for %d symbols", len(ret))
+	logger.Infof(ctx, "[Run] calculated for %d symbols", len(ret))
 	return nil
 }

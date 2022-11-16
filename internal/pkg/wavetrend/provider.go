@@ -1,12 +1,14 @@
 package wavetrendprovider
 
 import (
+	"context"
+
 	"farmer/internal/pkg/entities"
 	errPkg "farmer/pkg/errors"
 )
 
 type IWavetrendProvider interface {
-	StartService(svcName string) *errPkg.DomainError
+	StartService(ctx context.Context, svcName string) *errPkg.DomainError
 
 	SetStopSignal(svcName string)
 

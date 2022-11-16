@@ -1,0 +1,1 @@
+- <s> Bind logger to context. </s>

@@ -3,7 +3,6 @@ package worker
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -16,7 +15,6 @@ import (
 
 	c "farmer/internal/pkg/constants"
 	"farmer/internal/pkg/entities"
-	"farmer/internal/pkg/errors"
 	"farmer/internal/pkg/utils/indicators"
 	"farmer/internal/pkg/utils/logger"
 )
@@ -104,11 +102,9 @@ func (w *worker) GetPastWaveTrendData() (*entities.PastWavetrend, bool) {
 	return &ret, false
 }
 
-func (w *worker) Run(done chan<- error) {
-	log := logger.WithDescription(fmt.Sprintf("[Run] wavetrend worker %s-%s", w.symbol, w.timeFrame)).Sugar()
-
-	if err := w.initWaveTrendPastData(); err != nil {
-		done <- errors.NewDomainErrorInitWavetrendData(err, w.symbol)
+func (w *worker) Run(ctx context.Context, done chan<- error) {
+	if err := w.initWaveTrendPastData(ctx); err != nil {
+		done <- err
 		return
 	}
 
@@ -121,7 +117,7 @@ func (w *worker) Run(done chan<- error) {
 		currentCandle := binance.Kline{}
 		err := json.Unmarshal(msg.Payload, &currentCandle)
 		if err != nil {
-			log.Error(err)
+			logger.Error(ctx, err)
 			continue
 		}
 
@@ -129,12 +125,8 @@ func (w *worker) Run(done chan<- error) {
 		lastOpenTime := w.loadLastOpenTime()
 		now := uint64(time.Now().UnixMilli())
 		if now-lastOpenTime > periodMilis*2 {
-			err := w.updateWaveTrendForNextInterval(
-				lastOpenTime+periodMilis,
-				(now-lastOpenTime)/periodMilis-1,
-			)
+			err := w.updateWaveTrendForNextInterval(ctx, lastOpenTime+periodMilis, (now-lastOpenTime)/periodMilis-1)
 			if err != nil {
-				log.Error(err)
 				continue
 			}
 		}
@@ -150,7 +142,7 @@ func (w *worker) Run(done chan<- error) {
 
 		// FIXME: is this occurred?
 		if math.IsNaN(currentTci) || math.IsNaN(currentDifWavetrend) {
-			log.Errorf("pastWavetrend: %+v - currentTci: %f. currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
+			logger.Errorf(ctx, "pastWavetrend: %+v - currentTci: %f. currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
 			panic("NaN error")
 		}
 
@@ -164,7 +156,7 @@ func (w *worker) Run(done chan<- error) {
 	}
 }
 
-func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint64) error {
+func (w *worker) updateWaveTrendForNextInterval(ctx context.Context, fromOpenTime uint64, limit uint64) error {
 	symbol := w.symbol
 	interval := w.timeFrame
 
@@ -175,6 +167,7 @@ func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint6
 		Limit(int(limit)).
 		Do(context.Background())
 	if err != nil {
+		logger.Error(ctx, err)
 		return err
 	}
 
@@ -185,6 +178,7 @@ func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint6
 		c.EmaLenN1, c.EmaLenN2, c.AvgPeriodLen, c.DifWavetrendLen,
 	)
 	if err != nil {
+		logger.Error(ctx, err)
 		return err
 	}
 
@@ -192,15 +186,16 @@ func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint6
 	return nil
 }
 
-func (w *worker) initWaveTrendPastData() error {
+func (w *worker) initWaveTrendPastData(ctx context.Context) error {
 	interval := w.timeFrame
 
 	candles, err := w.bclient.NewKlinesService().
 		Symbol(w.symbol).
 		Interval(interval).
 		Limit(int(c.KlineHistoryLen)).
-		Do(context.Background())
+		Do(ctx)
 	if err != nil {
+		logger.Error(ctx, err)
 		return err
 	}
 	candles = candles[:len(candles)-1] // drop last candle

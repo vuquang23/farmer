@@ -1,6 +1,10 @@
 package worker
 
-import "farmer/internal/pkg/entities"
+import (
+	"context"
+
+	"farmer/internal/pkg/entities"
+)
 
 type IWavetrendWorker interface {
 	GetCurrentTci() (float64, bool)
@@ -8,6 +12,6 @@ type IWavetrendWorker interface {
 	GetClosePrice() (float64, bool)
 	GetPastWaveTrendData() (*entities.PastWavetrend, bool)
 
-	Run(done chan<- error)
+	Run(ctx context.Context, done chan<- error)
 	Stop()
 }

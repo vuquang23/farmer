@@ -1,6 +1,7 @@
 package spotworker
 
 import (
+	"context"
 	"time"
 
 	"farmer/internal/pkg/entities"
@@ -14,5 +15,5 @@ type ISpotWorker interface {
 	//GetHealth return time duration from last update until now.
 	GetHealth() time.Duration
 
-	Run(startC chan<- error)
+	Run(ctx context.Context, startC chan<- error)
 }
