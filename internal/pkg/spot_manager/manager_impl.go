@@ -33,6 +33,8 @@ func SpotManagerInstance() ISpotManager {
 }
 
 func (m *spotManager) Run(startC chan<- error) {
+	log := logger.WithDescription("[Run] spotManager")
+
 	if err := m.loadWorkers(); err != nil {
 		startC <- err
 		return
@@ -50,13 +52,15 @@ func (m *spotManager) Run(startC chan<- error) {
 		return
 	}
 
-	logger.Logger.Info("Start worker manager successfully")
+	log.Info("start worker manager successfully")
 
 	startC <- nil
 }
 
 func (m *spotManager) loadWorkers() error {
-	logger.Logger.Debug("Load workers")
+	log := logger.WithDescription("[loadWorkers] spotManager").Sugar()
+
+	log.Info("start to load workers")
 
 	workerStatus, err := m.swRepo.GetAllWorkerStatus()
 	if err != nil {
@@ -78,6 +82,8 @@ func (m *spotManager) loadWorkers() error {
 }
 
 func (m *spotManager) startWorkers() error {
+	log := logger.WithDescription("[startWorkers] spotManager").Sugar()
+
 	workerEntities, err := m.swRepo.GetAllWorkers()
 	if err != nil {
 		return err
@@ -93,7 +99,7 @@ func (m *spotManager) startWorkers() error {
 		}
 	}
 
-	logger.Logger.Sugar().Infof("Start %d workers", len(workerEntities))
+	log.Infof("start %d workers", len(workerEntities))
 
 	return nil
 }

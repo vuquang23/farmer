@@ -22,6 +22,7 @@ func newWorkerSetting() *workerSetting {
 func (s *workerSetting) store(e entities.SpotWorkerStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
 	s.symbol = e.Symbol
 	s.unitBuyAllowed = e.UnitBuyAllowed
 	s.unitNotional = e.UnitNotional

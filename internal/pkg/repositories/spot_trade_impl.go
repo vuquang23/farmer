@@ -45,23 +45,36 @@ func (r *spotTradeRepository) CreateBuyOrder(spotTrade entities.SpotTrade) *pkgE
 	return nil
 }
 
-func (r *spotTradeRepository) UpdateBuyOrders(IDs []uint64) *pkgErr.InfraError {
-	if err := r.db.Table("spot_trades").Where("id IN ?", IDs).Update("is_done", true).Error; err != nil {
-		return pkgErr.NewInfraErrorDBUpdate(err)
-	}
-
-	return nil
-}
-
 func (r *spotTradeRepository) CreateSellOrders(spotTrades []*entities.SpotTrade) *pkgErr.InfraError {
-	if err := r.db.CreateInBatches(&spotTrades, 100).Error; err != nil {
-		return pkgErr.NewInfraErrorDBInsert(err)
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.CreateInBatches(&spotTrades, 100).Error; err != nil {
+			return pkgErr.NewInfraErrorDBInsert(err)
+		}
+
+		buyOrderIDs := make([]uint64, len(spotTrades))
+		for idx, t := range spotTrades {
+			buyOrderIDs[idx] = t.Ref
+		}
+
+		if err := tx.Table("spot_trades").Where("id IN ?", buyOrderIDs).Update("is_done", true).Error; err != nil {
+			return pkgErr.NewInfraErrorDBUpdate(err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		infraErr, ok := err.(*pkgErr.InfraError)
+		if ok {
+			return infraErr
+		}
+		return pkgErr.NewInfraErrorDBUnknown(err)
 	}
 
 	return nil
 }
 
-func (r *spotTradeRepository) GetNotDoneBuyOrdersByWorkerIDAndCreatedAt(workerID uint64, createdAfter time.Time) ([]*entities.SpotTrade, *pkgErr.InfraError) {
+func (r *spotTradeRepository) GetNotDoneBuyOrdersByWorkerIDAndCreatedAtGT(workerID uint64, createdAfter time.Time) ([]*entities.SpotTrade, *pkgErr.InfraError) {
 	ret := []*entities.SpotTrade{}
 
 	err := r.db.
@@ -78,8 +91,7 @@ func (r *spotTradeRepository) GetTotalQuoteBenefit(workerID uint64) (float64, *p
 	type response struct {
 		TotalQuoteBenefit float64
 	}
-
-	ret := response{}
+	var ret response
 
 	querySell := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ?", workerID, "SELL")
 	err := r.db.Table("spot_trades").Joins("JOIN (?) querySell ON querySell.ref = spot_trades.id", querySell).Group("spot_trades.spot_worker_id").
@@ -96,8 +108,7 @@ func (r *spotTradeRepository) GetBaseAmountAndTotalUnitBought(workerID uint64) (
 		BaseAmount      float64
 		TotalUnitBought uint64
 	}
-
-	ret := response{}
+	var ret response
 
 	err := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).
 		Group("spot_worker_id").Select("SUM(qty+0) as base_amount, SUM(unit_bought) as total_unit_bought").Find(&ret).Error

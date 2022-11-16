@@ -26,7 +26,7 @@ func SpotWorkerRepositoryInstance() ISpotWorkerRepository {
 }
 
 func (r *spotWorkerRepository) GetAllWorkers() ([]*entities.SpotWorker, *errors.InfraError) {
-	ret := []*entities.SpotWorker{}
+	var ret []*entities.SpotWorker
 	if err := r.db.Find(&ret).Error; err != nil {
 		return nil, errors.NewInfraErrorDBSelect(err)
 	}
@@ -34,9 +34,9 @@ func (r *spotWorkerRepository) GetAllWorkers() ([]*entities.SpotWorker, *errors.
 }
 
 func (r *spotWorkerRepository) GetAllWorkerStatus() ([]*entities.SpotWorkerStatus, *errors.InfraError) {
-	ret := []*entities.SpotWorkerStatus{}
+	var ret []*entities.SpotWorkerStatus
 
-	query := r.db.Table("spot_trades").Select("spot_worker_id,unit_bought").
+	query := r.db.Table("spot_trades").Select("spot_worker_id, unit_bought").
 		Where("side = ? AND is_done = ?", "BUY", false)
 
 	err := r.db.Table("spot_workers").Select("spot_workers.id, spot_workers.symbol", "spot_workers.unit_buy_allowed", "spot_workers.unit_notional", "SUM(q.unit_bought) AS total_unit_bought").

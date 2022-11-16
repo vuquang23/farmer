@@ -5,7 +5,7 @@ import "farmer/internal/pkg/entities"
 type IWavetrendWorker interface {
 	GetCurrentTci() (float64, bool)
 	GetCurrentDifWavetrend() (float64, bool)
-	GetClosePrice() float64
+	GetClosePrice() (float64, bool)
 	GetPastWaveTrendData() (*entities.PastWavetrend, bool)
 
 	Run(done chan<- error)

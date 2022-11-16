@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,10 @@ func main() {
 	app.Commands = append(app.Commands, updateSymbolListCommand())
 	app.Commands = append(app.Commands, calcWavetrendMomentumCommand())
 
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func spotFarmerCommand() *cli.Command {
@@ -51,7 +55,7 @@ func spotFarmerCommand() *cli.Command {
 			fmt.Printf("Run spot farmer with test mode: %t", isTest)
 
 			if err := config.Load(cfgFile); err != nil {
-				return errors.New("Can not load config")
+				return errors.New("can not load config")
 			}
 
 			components.InitSpotFarmerComponents(isTest)

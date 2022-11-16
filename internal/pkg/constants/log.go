@@ -1,9 +1,6 @@
 package constants
 
 const (
-	CtxLoggerKey     = "CtxLoggerKey"
-	CtxRequestIDKey  = "CtxRequestIDKey"
-	CtxAPIRequestKey = "CtxAPIRequestKey"
-
+	CtxLoggerKey      = "CtxLoggerKey"
 	CtxDescriptionKey = "CtxDescriptionKey"
 )

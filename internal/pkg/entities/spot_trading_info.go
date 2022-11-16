@@ -10,7 +10,7 @@ type (
 		CurrentUsdValue        float64
 		CurrentUsdValueChanged float64
 		UnitBuyAllowed         uint64
-		UnitNotional           float64
+		UnitNotional           float64 // notional ($) of each unit
 		TotalUnitBought        uint64
 	}
 )
