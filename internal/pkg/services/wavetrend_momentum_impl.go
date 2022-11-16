@@ -111,7 +111,7 @@ func (s *wtMomentumService) queryKline(
 			Symbol(symbol + "USDT").
 			Interval(interval).
 			Limit(int(pass)).
-			Do(context.Background())
+			Do(ctx)
 		if err != nil {
 			return nil, errors.NewDomainErrorUnknown(err)
 		}
@@ -121,7 +121,7 @@ func (s *wtMomentumService) queryKline(
 			Symbol((symbol + "USDT")).
 			Interval(interval).
 			Limit(int(pass)).
-			Do(context.Background())
+			Do(ctx)
 		if err != nil {
 			return nil, errors.NewDomainErrorUnknown(err)
 		}

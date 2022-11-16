@@ -165,7 +165,7 @@ func (w *worker) updateWaveTrendForNextInterval(ctx context.Context, fromOpenTim
 		Interval(interval).
 		StartTime(int64(fromOpenTime)).
 		Limit(int(limit)).
-		Do(context.Background())
+		Do(ctx)
 	if err != nil {
 		logger.Error(ctx, err)
 		return err

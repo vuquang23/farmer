@@ -36,7 +36,7 @@ func (m *spotManager) updateExchangeInfoPeriodically(ctx context.Context, doneC 
 }
 
 func (m *spotManager) updateExchangeInfo(ctx context.Context) error {
-	exchangeInfo, err := m.bclient.NewExchangeInfoService().Do(context.Background())
+	exchangeInfo, err := m.bclient.NewExchangeInfoService().Do(ctx)
 	if err != nil {
 		logger.Error(ctx, err)
 		return err

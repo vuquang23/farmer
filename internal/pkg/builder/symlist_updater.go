@@ -28,7 +28,7 @@ func (updater *symlistUpdater) Run(ctx context.Context, filePath string) error {
 	defer fo.Close()
 
 	res, err := binance.BinanceSpotClientInstance().
-		NewGetAllCoinsInfoService().Do(context.Background())
+		NewGetAllCoinsInfoService().Do(ctx)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (updater *symlistUpdater) Run(ctx context.Context, filePath string) error {
 		_, err := binance.BinanceSpotClientInstance().
 			NewKlinesService().Symbol(coin.Coin + "USDT").
 			Interval("1d").Limit(1).
-			Do(context.Background())
+			Do(ctx)
 		if err != nil {
 			logger.Error(ctx, err)
 			continue

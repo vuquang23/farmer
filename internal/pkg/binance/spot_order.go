@@ -7,35 +7,45 @@ import (
 	"github.com/adshao/go-binance/v2"
 
 	"farmer/internal/pkg/errors"
+	"farmer/internal/pkg/utils/logger"
+	errPkg "farmer/pkg/errors"
 )
 
-func CreateSpotBuyOrder(client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, error) {
+func CreateSpotBuyOrder(ctx context.Context, client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, *errPkg.DomainError) {
 	order, err := client.NewCreateOrderService().Symbol(symbol).
 		Side(binance.SideTypeBuy).Type(binance.OrderTypeLimit).
 		TimeInForce(binance.TimeInForceTypeFOK).Quantity(qty).Price(price).
-		Do(context.Background())
+		Do(ctx)
 	if err != nil {
-		return nil, errors.NewDomainErrorCreateBuyOrderFailed(err)
+		domainErr := errors.NewDomainErrorCreateBuyOrderFailed(err)
+		logger.Error(ctx, domainErr)
+		return nil, domainErr
 	}
 
 	if order.Status != binance.OrderStatusTypeFilled {
-		return nil, errors.NewDomainErrorCreateBuyOrderFailed(fmt.Errorf("status: %s", order.Status))
+		err := errors.NewDomainErrorCreateBuyOrderFailed(fmt.Errorf("status: %s", order.Status))
+		logger.Error(ctx, err)
+		return nil, err
 	}
 
 	return order, nil
 }
 
-func CreateSpotSellOrder(client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, error) {
+func CreateSpotSellOrder(ctx context.Context, client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, *errPkg.DomainError) {
 	order, err := client.NewCreateOrderService().Symbol(symbol).
 		Side(binance.SideTypeSell).Type(binance.OrderTypeLimit).
 		TimeInForce(binance.TimeInForceTypeFOK).Quantity(qty).Price(price).
-		Do(context.Background())
+		Do(ctx)
 	if err != nil {
-		return nil, errors.NewDomainErrorCreateSellOrderFailed(err)
+		domainErr := errors.NewDomainErrorCreateSellOrderFailed(err)
+		logger.Error(ctx, domainErr)
+		return nil, domainErr
 	}
 
 	if order.Status != binance.OrderStatusTypeFilled {
-		return nil, errors.NewDomainErrorCreateSellOrderFailed(fmt.Errorf("status: %s", order.Status))
+		err := errors.NewDomainErrorCreateSellOrderFailed(fmt.Errorf("status: %s", order.Status))
+		logger.Error(ctx, err)
+		return nil, err
 	}
 
 	return order, nil

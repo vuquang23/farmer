@@ -195,7 +195,7 @@ func (w *spotWorker) createSellOrders(ctx context.Context, sSignal *en.SpotSellS
 			)
 
 			if res, err := b.CreateSpotSellOrder(
-				w.bclient, w.setting.symbol, order.Qty,
+				ctx, w.bclient, w.setting.symbol, order.Qty,
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
 			); err == nil {
 				logger.Infof(
@@ -452,7 +452,7 @@ func (w *spotWorker) createBuyOrder(ctx context.Context, bSignal *en.SpotBuySign
 		)
 
 		if res, err := b.CreateSpotBuyOrder(
-			w.bclient, w.setting.symbol,
+			ctx, w.bclient, w.setting.symbol,
 			maths.RoundingUp(qty, w.exchangeInf.loadQtyPrecision()),
 			maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
 		); err == nil {
@@ -462,8 +462,6 @@ func (w *spotWorker) createBuyOrder(ctx context.Context, bSignal *en.SpotBuySign
 			)
 
 			return res, nil
-		} else {
-			logger.Error(ctx, err)
 		}
 	}
 

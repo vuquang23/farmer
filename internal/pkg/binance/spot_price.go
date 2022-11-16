@@ -6,14 +6,17 @@ import (
 	"github.com/adshao/go-binance/v2"
 
 	"farmer/internal/pkg/errors"
+	"farmer/internal/pkg/utils/logger"
 	"farmer/internal/pkg/utils/maths"
-	pkgErr "farmer/pkg/errors"
+	errPkg "farmer/pkg/errors"
 )
 
-func GetSpotPrice(client *binance.Client, symbol string) (float64, *pkgErr.DomainError) {
-	ret, err := client.NewAveragePriceService().Symbol(symbol).Do(context.Background())
+func GetSpotPrice(ctx context.Context, client *binance.Client, symbol string) (float64, *errPkg.DomainError) {
+	ret, err := client.NewAveragePriceService().Symbol(symbol).Do(ctx)
 	if err != nil {
-		return 0, errors.NewDomainErrorGetPriceFailed(err)
+		domainErr := errors.NewDomainErrorGetPriceFailed(err)
+		logger.Error(ctx, domainErr)
+		return 0, domainErr
 	}
 
 	return maths.StrToFloat(ret.Price), nil
