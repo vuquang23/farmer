@@ -34,7 +34,7 @@ type worker struct {
 	cancelSubscribe context.CancelFunc
 }
 
-//NewWavetrendWorker calculates wavetrend base on svcName (eg: BTCUSDT:1h, ETHUSDT:1m, future:BTCUSDT:1m)
+// NewWavetrendWorker calculates wavetrend base on svcName (eg: BTCUSDT:1h, ETHUSDT:1m, future:BTCUSDT:1m)
 func NewWavetrendWorker(svcName string, bclient *binance.Client, klineMsgChan <-chan *message.Message, cancelSubscribe context.CancelFunc) IWavetrendWorker {
 	s := strings.Split(svcName, ":")
 	stopSignal := uint32(0)
@@ -84,8 +84,13 @@ func (w *worker) GetCurrentDifWavetrend() (float64, bool) {
 	return difWavetrend, false
 }
 
-func (w *worker) GetClosePrice() float64 {
-	return w.loadClosePrice()
+func (w *worker) GetClosePrice() (float64, bool) {
+	closePrice, updatedAt := w.loadClosePriceAndLastUpdatedAt()
+	outDatedTime := w.setting.timeFrameUnixMili
+	if time.Now().UnixMilli()-updatedAt.UnixMilli() > int64(outDatedTime) {
+		return 0, true
+	}
+	return closePrice, false
 }
 
 func (w *worker) GetPastWaveTrendData() (*entities.PastWavetrend, bool) {
@@ -100,7 +105,7 @@ func (w *worker) GetPastWaveTrendData() (*entities.PastWavetrend, bool) {
 }
 
 func (w *worker) Run(done chan<- error) {
-	log := logger.WithDescription(fmt.Sprintf("[%s-%s] Update wave trend periodically", w.symbol, w.timeFrame))
+	log := logger.WithDescription(fmt.Sprintf("[Run] wavetrend worker %s-%s", w.symbol, w.timeFrame)).Sugar()
 
 	if err := w.initWaveTrendPastData(); err != nil {
 		done <- errors.NewDomainErrorInitWavetrendData(err, w.symbol)
@@ -116,7 +121,7 @@ func (w *worker) Run(done chan<- error) {
 		currentCandle := binance.Kline{}
 		err := json.Unmarshal(msg.Payload, &currentCandle)
 		if err != nil {
-			log.Sugar().Error(err)
+			log.Error(err)
 			continue
 		}
 
@@ -129,7 +134,7 @@ func (w *worker) Run(done chan<- error) {
 				(now-lastOpenTime)/periodMilis-1,
 			)
 			if err != nil {
-				log.Sugar().Error(err)
+				log.Error(err)
 				continue
 			}
 		}
@@ -145,7 +150,7 @@ func (w *worker) Run(done chan<- error) {
 
 		// FIXME: is this occurred?
 		if math.IsNaN(currentTci) || math.IsNaN(currentDifWavetrend) {
-			log.Sugar().Errorf("pastWavetrend: %+v - currentTci: %f. currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
+			log.Errorf("pastWavetrend: %+v - currentTci: %f. currentDifWavetrend: %f", pastWavetrend, currentTci, currentDifWavetrend)
 			panic("NaN error")
 		}
 
@@ -188,9 +193,6 @@ func (w *worker) updateWaveTrendForNextInterval(fromOpenTime uint64, limit uint6
 }
 
 func (w *worker) initWaveTrendPastData() error {
-	log := logger.WithDescription(fmt.Sprintf("[%s-%s] Init wavetrend past data", w.symbol, w.timeFrame))
-	log.Debug("Begin func")
-
 	interval := w.timeFrame
 
 	candles, err := w.bclient.NewKlinesService().
@@ -209,7 +211,5 @@ func (w *worker) initWaveTrendPastData() error {
 	)
 
 	w.storePastWaveTrendData(*pastWavetrend)
-
-	log.Debug("End func")
 	return nil
 }

@@ -36,7 +36,7 @@ func SpotTradeServiceInstance() ISpotTradeService {
 }
 
 func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pkgErr.DomainError) {
-	ret := []*en.SpotTradingPairInfo{}
+	var ret []*en.SpotTradingPairInfo
 
 	workers, err := s.spotWorkerRepo.GetAllWorkers()
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pk
 	}
 
 	for _, w := range workers {
-		temp := &en.SpotTradingPairInfo{
+		info := &en.SpotTradingPairInfo{
 			Symbol:         w.Symbol,
 			UnitBuyAllowed: w.UnitBuyAllowed,
 			UnitNotional:   w.UnitNotional,
@@ -53,25 +53,25 @@ func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pk
 		if usdBenefit, err := s.spotTradeRepo.GetTotalQuoteBenefit(w.ID); err != nil {
 			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(err)
 		} else {
-			temp.UsdBenefit = usdBenefit
+			info.UsdBenefit = usdBenefit
 		}
 
 		if baseAmount, totalUnitBought, err := s.spotTradeRepo.GetBaseAmountAndTotalUnitBought(w.ID); err != nil {
 			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(err)
 		} else {
-			temp.BaseAmount = baseAmount
-			temp.TotalUnitBought = totalUnitBought
+			info.BaseAmount = baseAmount
+			info.TotalUnitBought = totalUnitBought
 		}
 
 		if price, err := b.GetSpotPrice(s.bclient, w.Symbol); err != nil {
 			return nil, err
 		} else {
-			temp.QuoteAmount = temp.UnitNotional * (float64(temp.UnitBuyAllowed) - float64(temp.TotalUnitBought))
-			temp.CurrentUsdValue = temp.QuoteAmount + temp.BaseAmount*price + temp.UsdBenefit
-			temp.CurrentUsdValueChanged = temp.CurrentUsdValue - temp.UnitNotional*float64(temp.UnitBuyAllowed)
+			info.QuoteAmount = info.UnitNotional * (float64(info.UnitBuyAllowed) - float64(info.TotalUnitBought))
+			info.CurrentUsdValue = info.QuoteAmount + info.BaseAmount*price + info.UsdBenefit
+			info.CurrentUsdValueChanged = info.CurrentUsdValue - info.UnitNotional*float64(info.UnitBuyAllowed)
 		}
 
-		ret = append(ret, temp)
+		ret = append(ret, info)
 	}
 
 	return ret, nil

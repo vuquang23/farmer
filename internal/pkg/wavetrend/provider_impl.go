@@ -85,7 +85,7 @@ func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
 }
 
 func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- error, stopConnC chan struct{}) {
-	log := logger.WithDescription(fmt.Sprintf("%s - Start WS Connection", svcName))
+	log := logger.WithDescription(fmt.Sprintf("[startKlineWSConnection] %s", svcName)).Sugar()
 	strs := strings.Split(svcName, ":")
 
 	// TODO: case future.
@@ -115,28 +115,29 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 
 		marshedPayload, err := json.Marshal(kline)
 		if err != nil {
-			log.Sugar().Error(err)
+			log.Error(err)
 			return
 		}
 
 		if err := p.klineChannel.Publish(svcName, &message.Message{
 			Payload: marshedPayload,
 		}); err != nil {
-			log.Sugar().Error(err)
+			log.Error(err)
+			return
 		}
 	}
 
 	var errHandler = func(err error) {
-		log.Sugar().Error(err)
+		log.Error(err)
 	}
 
 	once := &sync.Once{}
 	for {
-		log.Debug("Connect WS Kline")
+		log.Info("connect WS Kline")
 
 		doneC, stopC, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
 		if err != nil {
-			log.Sugar().Error()
+			log.Error()
 			continue
 		}
 
@@ -144,20 +145,19 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 			initC <- nil
 		})
 
-		log.Debug("Begin polling...")
-
+		log.Info("start polling...")
 		// polling
 		select {
 		case <-stopConnC:
-			log.Debug("In stopConnC...")
+			log.Info("in stopConnC...")
 			stopC <- struct{}{}
 			return
 		case <-doneC:
-			log.Debug("In doneC...")
+			log.Info("in doneC...")
 			time.Sleep(2 * time.Second)
 		}
 
-		log.Debug("Reset Kline WS Connection")
+		log.Info("reset Kline WS connection")
 	}
 }
 
@@ -189,12 +189,12 @@ func (p *wavetrendProvider) GetCurrentDifWavetrend(svcName string) (float64, boo
 	return 0, true
 }
 
-func (p *wavetrendProvider) GetClosePrice(svcName string) float64 {
+func (p *wavetrendProvider) GetClosePrice(svcName string) (float64, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
 		return w.GetClosePrice()
 	}
-	return 0
+	return 0, true
 }
 
 func (p *wavetrendProvider) GetPastWaveTrendData(svcName string) (*entities.PastWavetrend, bool) {

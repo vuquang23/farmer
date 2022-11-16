@@ -6,7 +6,7 @@ import "fmt"
 type DBConfig struct {
 	Host         string `default:"localhost"`
 	Port         int    `default:"3306"`
-	DBName       string `default:"ks_setting"`
+	DBName       string `default:"farmer"`
 	User         string `default:"user"`
 	Password     string `default:"password"`
 	ConnLifeTime int    `default:"300"`

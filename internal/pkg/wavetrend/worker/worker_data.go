@@ -55,6 +55,7 @@ type currentWavetrendData struct {
 	currentDifWavetrend              float64 // tci - average(tci, 4)
 	currentDifWavetrendLastUpdatedAt time.Time
 	closePrice                       float64
+	closePriceLastUpdatedAt          time.Time
 }
 
 func newCurrentWavetrendData() *currentWavetrendData {
@@ -95,11 +96,11 @@ func (w *worker) loadCurrentDifWavetrendAndLastUpdatedAt() (float64, time.Time) 
 	return w.currentData.currentDifWavetrend, w.currentData.currentDifWavetrendLastUpdatedAt
 }
 
-func (w *worker) loadClosePrice() float64 {
+func (w *worker) loadClosePriceAndLastUpdatedAt() (float64, time.Time) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	return w.currentData.closePrice
+	return w.currentData.closePrice, w.currentData.closePriceLastUpdatedAt
 }
 
 func (w *worker) storeClosePrice(value float64) {
@@ -107,4 +108,5 @@ func (w *worker) storeClosePrice(value float64) {
 	defer w.mu.Unlock()
 
 	w.currentData.closePrice = value
+	w.currentData.closePriceLastUpdatedAt = time.Now()
 }

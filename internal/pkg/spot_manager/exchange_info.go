@@ -13,7 +13,7 @@ import (
 )
 
 func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- error) {
-	log := logger.WithDescription("Update exchange info periodically")
+	log := logger.WithDescription("[updateExchangeInfoPeriodically] spotManager")
 
 	once := &sync.Once{}
 	ticker := time.NewTicker(time.Hour)
@@ -25,7 +25,7 @@ func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- error) {
 				doneC <- domainErr
 				return
 			}
-			log.Sugar().Error(domainErr)
+			log.Sugar().Warn(domainErr)
 			continue
 		}
 
