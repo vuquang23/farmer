@@ -18,5 +18,5 @@ telebot:
   Token:
   GroupID:
 binance:
-  ApiKey:
-  SecretKey:
+  ApiKey: dg16fBBCcLsvevrj2PRoWPZDOxWXWfUswACLWgb71Hr3EWceOY6tszrnrYwkjRlc
+  SecretKey: g7pD2fazEGkm4rKHbxPIn83TniAyumLfuGyz9SPW4bjP3qEVTaS0OxEnUwVYuAwn
