@@ -64,3 +64,21 @@ func (r *spotWorkerRepository) UpdateUnitNotionalByID(ctx context.Context, ID ui
 
 	return nil
 }
+
+func (r *spotWorkerRepository) Create(ctx context.Context, w *entities.SpotWorker) (*entities.SpotWorker, *errors.InfraError) {
+	err := r.db.Create(w).Error
+	if err != nil {
+		logger.Error(ctx, err)
+		return nil, errors.NewInfraErrorDBInsert(err)
+	}
+	return w, nil
+}
+
+func (r *spotWorkerRepository) DeleteByID(ctx context.Context, ID uint64) *errors.InfraError {
+	err := r.db.Delete(&entities.SpotWorker{}, ID).Error
+	if err != nil {
+		logger.Error(ctx, err)
+		return errors.NewInfraErrorDBDelete(err)
+	}
+	return nil
+}

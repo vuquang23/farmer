@@ -1,7 +1,7 @@
 package telebot
 
 import (
-	"context"
+	goctx "context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -16,11 +16,12 @@ import (
 	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/services"
 	spotmanager "farmer/internal/pkg/spot_manager"
+	"farmer/internal/pkg/utils/context"
 	"farmer/internal/pkg/utils/logger"
 )
 
 type ITeleBot interface {
-	Run(ctx context.Context)
+	Run(ctx goctx.Context)
 	SendMsg(ctx context.Context, msg interface{})
 	SendMsgWithFormat(ctx context.Context, template string, params ...interface{})
 }
@@ -71,7 +72,7 @@ func InitTeleBot(spotTradeSvc services.ISpotTradeService) error {
 }
 
 // Run runs bot
-func (t *teleBot) Run(ctx context.Context) {
+func (t *teleBot) Run(ctx goctx.Context) {
 	logger.Info(ctx, "[Run] start telebot")
 	t.bot.Start()
 }
@@ -98,6 +99,8 @@ func (t *teleBot) setupRoute() {
 	t.m["get!/spot/account-info"] = t.getSpotAccountInfo
 	t.m["get!/health"] = t.healthCheck
 
+	t.m["post!/spot"] = t.createNewSpotWorker
+
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		args := strings.Fields(c.Text())
 		cmd := args[0]
@@ -114,17 +117,15 @@ func (t *teleBot) setupRoute() {
 
 func (t *teleBot) getSpotAccountInfo(c tb.Context) {
 	f := func() string {
-		ctx := context.Background()
+		ctx := goctx.Background()
 		ret, err := t.spotTradeSvc.GetTradingPairsInfo(ctx)
 		if err != nil {
 			logger.Error(ctx, err)
-			byteRes, _ := json.Marshal(err)
-			return string(pretty.Pretty(byteRes))
+			return message(err)
 		}
 
 		dtoRes := toGetSpotAccountInfoResponse(ret)
-		byteRes, _ := json.Marshal(dtoRes)
-		return string(pretty.Pretty(byteRes))
+		return message(dtoRes)
 	}
 
 	msg := f()
@@ -161,9 +162,42 @@ func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAc
 	}
 }
 
-func (t *teleBot) healthCheck(ctx tb.Context) {
+func (t *teleBot) healthCheck(c tb.Context) {
 	mapping := spotmanager.SpotManagerInstance().CheckHealth()
-	bRes, _ := json.Marshal(mapping)
-	response := string(pretty.Pretty(bRes))
-	ctx.Send(response)
+	c.Send(message(mapping))
+}
+
+func (t *teleBot) createNewSpotWorker(c tb.Context) {
+	f := func() string {
+		ctx := goctx.Background()
+		args := strings.Fields(c.Text())
+		if len(args) == 1 {
+			return "missing required body"
+		}
+
+		var req CreateNewSpotWorkerReq
+		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
+			logger.Error(ctx, err)
+			return message(err)
+		}
+
+		params := req.Normalize().ToCreateNewSpotWorkerParams()
+		if err := spotmanager.SpotManagerInstance().CreateNewWorker(context.Child(ctx, fmt.Sprintf("[create-new-worker] %s", params.Symbol)), params); err != nil {
+			return message(err)
+		}
+
+		return message("ok")
+	}
+
+	msg := f()
+	c.Send(msg)
+}
+
+func message(data interface{}) string {
+	dataStr, ok := data.(string)
+	if ok {
+		return dataStr
+	}
+	dataBytes, _ := json.Marshal(data)
+	return string(pretty.Pretty(dataBytes))
 }
