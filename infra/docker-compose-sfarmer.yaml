@@ -14,9 +14,9 @@ services:
       - DB_NAME=farmer
       - DB_USER=root
       - DB_PASSWORD=123456
-      - BINANCE_APIKEY=dg16fBBCcLsvevrj2PRoWPZDOxWXWfUswACLWgb71Hr3EWceOY6tszrnrYwkjRlc
-      - BINANCE_SECRETKEY=g7pD2fazEGkm4rKHbxPIn83TniAyumLfuGyz9SPW4bjP3qEVTaS0OxEnUwVYuAwn
-      - TELEBOT_TOKEN=5391392501:AAF66073DXJ1hyrsjnxFW5Q0zgN8lGKOJqE
+      - BINANCE_APIKEY=
+      - BINANCE_SECRETKEY=
+      - TELEBOT_TOKEN=
     volumes:
       - ./volumes/log:/app/log
     networks:

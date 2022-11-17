@@ -1,7 +1,7 @@
 package wavetrendprovider
 
 import (
-	"context"
+	goctx "context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +16,7 @@ import (
 	b "farmer/internal/pkg/binance"
 	"farmer/internal/pkg/entities"
 	e "farmer/internal/pkg/errors"
+	"farmer/internal/pkg/utils/context"
 	"farmer/internal/pkg/utils/logger"
 	w "farmer/internal/pkg/wavetrend/worker"
 	errPkg "farmer/pkg/errors"
@@ -51,7 +52,7 @@ func WavetrendProviderInstance() IWavetrendProvider {
 // StartService start connect websocket to binance server and start worker.
 //
 // svcName: BTCUSDT:1h, ETHUSDT:1m, future:ETHUSDT:1m...
-func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
+func (p *wavetrendProvider) StartService(ctx goctx.Context, svcName string) *errPkg.DomainError {
 	if _, ok := p.mapSymbolWorker[svcName]; ok {
 		return e.NewDomainErrorWavetrendServiceNameExisted(nil)
 	}
@@ -59,15 +60,15 @@ func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
 	// init ws to receive realtime data from binance and push data to wavetrend worker
 	initC := make(chan error)
 	stopConnC := make(chan struct{})
-	go p.startKlineWSConnection(svcName, initC, stopConnC)
+	go p.startKlineWSConnection(context.Child(ctx, fmt.Sprintf("[kline-ws] %s", svcName)), svcName, initC, stopConnC)
 	if err := <-initC; err != nil {
 		return errPkg.NewDomainErrorUnknown(err)
 	}
 	p.mapSymbolStopWsChan[svcName] = stopConnC
 
 	// wavetrend worker subscribe to receive kline data from wavetrend provider
-	ctx, cancel := context.WithCancel(context.Background())
-	klineMsgChan, err := p.klineChannel.Subscribe(ctx, svcName)
+	c, cancel := goctx.WithCancel(ctx)
+	klineMsgChan, err := p.klineChannel.Subscribe(context.Child(c, fmt.Sprintf("[kline-channel] %s", svcName)), svcName)
 	if err != nil {
 		cancel()
 		return errPkg.NewDomainErrorUnknown(err)
@@ -75,17 +76,16 @@ func (p *wavetrendProvider) StartService(svcName string) *errPkg.DomainError {
 
 	worker := w.NewWavetrendWorker(svcName, b.BinanceSpotClientInstance(), klineMsgChan, cancel)
 	start := make(chan error)
-	go worker.Run(start)
+	go worker.Run(context.Child(ctx, fmt.Sprintf("[wavetrend-worker] %s", svcName)), start)
 	if err := <-start; err != nil {
-		return e.NewDomainErrorWavetrendServiceNameExisted(err)
+		return errPkg.NewDomainErrorUnknown(err)
 	}
 	p.mapSymbolWorker[svcName] = worker
 
 	return nil
 }
 
-func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- error, stopConnC chan struct{}) {
-	log := logger.WithDescription(fmt.Sprintf("[startKlineWSConnection] %s", svcName)).Sugar()
+func (p *wavetrendProvider) startKlineWSConnection(ctx goctx.Context, svcName string, initC chan<- error, stopConnC chan struct{}) {
 	strs := strings.Split(svcName, ":")
 
 	// TODO: case future.
@@ -115,29 +115,29 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 
 		marshedPayload, err := json.Marshal(kline)
 		if err != nil {
-			log.Error(err)
+			logger.Error(ctx, err)
 			return
 		}
 
 		if err := p.klineChannel.Publish(svcName, &message.Message{
 			Payload: marshedPayload,
 		}); err != nil {
-			log.Error(err)
+			logger.Error(ctx, err)
 			return
 		}
 	}
 
 	var errHandler = func(err error) {
-		log.Error(err)
+		logger.Error(ctx, err)
 	}
 
 	once := &sync.Once{}
 	for {
-		log.Info("connect WS Kline")
+		logger.Info(ctx, "[startKlineWSConnection] connect WS Kline")
 
 		doneC, stopC, err := binance.WsKlineServe(symbol, timeFrame, handler, errHandler)
 		if err != nil {
-			log.Error()
+			logger.Error(ctx, err)
 			continue
 		}
 
@@ -145,19 +145,19 @@ func (p *wavetrendProvider) startKlineWSConnection(svcName string, initC chan<- 
 			initC <- nil
 		})
 
-		log.Info("start polling...")
+		logger.Info(ctx, "[startKlineWSConnection] start polling...")
 		// polling
 		select {
 		case <-stopConnC:
-			log.Info("in stopConnC...")
+			logger.Info(ctx, "[startKlineWSConnection] in stopConnC...")
 			stopC <- struct{}{}
 			return
 		case <-doneC:
-			log.Info("in doneC...")
+			logger.Info(ctx, "[startKlineWSConnection] in doneC...")
 			time.Sleep(2 * time.Second)
 		}
 
-		log.Info("reset Kline WS connection")
+		logger.Info(ctx, "[startKlineWSConnection] reset Kline WS connection")
 	}
 }
 

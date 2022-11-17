@@ -15,8 +15,8 @@ db:
 common:
   LogLevel: -1 #debug
 telebot:
-  Token: "5391392501:AAF66073DXJ1hyrsjnxFW5Q0zgN8lGKOJqE"
+  Token:
   GroupID:
 binance:
-  ApiKey: dg16fBBCcLsvevrj2PRoWPZDOxWXWfUswACLWgb71Hr3EWceOY6tszrnrYwkjRlc
-  SecretKey: g7pD2fazEGkm4rKHbxPIn83TniAyumLfuGyz9SPW4bjP3qEVTaS0OxEnUwVYuAwn
+  ApiKey:
+  SecretKey:

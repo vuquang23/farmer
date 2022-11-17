@@ -12,20 +12,19 @@ import (
 	"farmer/internal/pkg/utils/maths"
 )
 
-func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- error) {
-	log := logger.WithDescription("[updateExchangeInfoPeriodically] spotManager")
+func (m *spotManager) updateExchangeInfoPeriodically(ctx context.Context, doneC chan<- error) {
+	logger.Info(ctx, "[updateExchangeInfoPeriodically] start updating exchange info")
 
 	once := &sync.Once{}
 	ticker := time.NewTicker(time.Hour)
 	isInit := true
 	for ; true; <-ticker.C {
-		if err := m.updateExchangeInfo(); err != nil {
+		if err := m.updateExchangeInfo(ctx); err != nil {
 			domainErr := errors.NewDomainErrorInitExchangeInfo(err)
 			if isInit {
 				doneC <- domainErr
 				return
 			}
-			log.Sugar().Warn(domainErr)
 			continue
 		}
 
@@ -36,9 +35,10 @@ func (m *spotManager) updateExchangeInfoPeriodically(doneC chan<- error) {
 	}
 }
 
-func (m *spotManager) updateExchangeInfo() error {
-	exchangeInfo, err := m.bclient.NewExchangeInfoService().Do(context.Background())
+func (m *spotManager) updateExchangeInfo(ctx context.Context) error {
+	exchangeInfo, err := m.bclient.NewExchangeInfoService().Do(ctx)
 	if err != nil {
+		logger.Error(ctx, err)
 		return err
 	}
 	for _, s := range exchangeInfo.Symbols {
@@ -58,17 +58,20 @@ func (m *spotManager) updateExchangeInfo() error {
 				tickSize := f["tickSize"].(string)
 				pricePrecision, err = maths.GetPrecision(tickSize)
 				if err != nil {
+					logger.Error(ctx, err)
 					return err
 				}
 			case "LOT_SIZE":
 				stepSize := f["stepSize"].(string)
 				qtyPrecision, err = maths.GetPrecision(stepSize)
 				if err != nil {
+					logger.Error(ctx, err)
 					return err
 				}
 			case "MIN_NOTIONAL":
 				minNotional, err = strconv.ParseFloat(f["minNotional"].(string), 64)
 				if err != nil {
+					logger.Error(ctx, err)
 					return err
 				}
 			}

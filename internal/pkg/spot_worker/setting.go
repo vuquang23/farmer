@@ -41,3 +41,10 @@ func (s *workerSetting) loadUnitNotional() float64 {
 
 	return s.unitNotional
 }
+
+func (s *workerSetting) updateUnitNotional(val float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.unitNotional += val
+}

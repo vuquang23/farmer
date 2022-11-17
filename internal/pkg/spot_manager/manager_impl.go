@@ -1,11 +1,15 @@
 package spotmanager
 
 import (
+	goctx "context"
+	"fmt"
+
 	"github.com/adshao/go-binance/v2"
 
 	bn "farmer/internal/pkg/binance"
 	"farmer/internal/pkg/repositories"
 	sw "farmer/internal/pkg/spot_worker"
+	"farmer/internal/pkg/utils/context"
 	"farmer/internal/pkg/utils/logger"
 	wtp "farmer/internal/pkg/wavetrend"
 )
@@ -32,37 +36,33 @@ func SpotManagerInstance() ISpotManager {
 	return manager
 }
 
-func (m *spotManager) Run(startC chan<- error) {
-	log := logger.WithDescription("[Run] spotManager")
-
-	if err := m.loadWorkers(); err != nil {
+func (m *spotManager) Run(ctx goctx.Context, startC chan<- error) {
+	if err := m.loadWorkers(ctx); err != nil {
 		startC <- err
 		return
 	}
 
 	doneC := make(chan error)
-	go m.updateExchangeInfoPeriodically(doneC)
+	go m.updateExchangeInfoPeriodically(context.Child(ctx, "spot manager update exchange info periodically"), doneC)
 	if err := <-doneC; err != nil {
 		startC <- err
 		return
 	}
 
-	if err := m.startWorkers(); err != nil {
+	if err := m.startWorkers(ctx); err != nil {
 		startC <- err
 		return
 	}
 
-	log.Info("start worker manager successfully")
+	logger.Info(ctx, "[Run] start worker manager successfully")
 
 	startC <- nil
 }
 
-func (m *spotManager) loadWorkers() error {
-	log := logger.WithDescription("[loadWorkers] spotManager").Sugar()
+func (m *spotManager) loadWorkers(ctx goctx.Context) error {
+	logger.Info(ctx, "[loadWorkers] start to load workers")
 
-	log.Info("start to load workers")
-
-	workerStatus, err := m.swRepo.GetAllWorkerStatus()
+	workerStatus, err := m.swRepo.GetAllWorkerStatus(ctx)
 	if err != nil {
 		return err
 	}
@@ -73,6 +73,7 @@ func (m *spotManager) loadWorkers() error {
 			bn.BinanceSpotClientInstance(),
 			wtp.WavetrendProviderInstance(),
 			repositories.SpotTradeRepositoryInstance(),
+			repositories.SpotWorkerRepositoryInstance(),
 		)
 		worker.SetWorkerSettingAndStatus(*w)
 		m.mapSymbolWorker[w.Symbol] = worker
@@ -81,10 +82,8 @@ func (m *spotManager) loadWorkers() error {
 	return nil
 }
 
-func (m *spotManager) startWorkers() error {
-	log := logger.WithDescription("[startWorkers] spotManager").Sugar()
-
-	workerEntities, err := m.swRepo.GetAllWorkers()
+func (m *spotManager) startWorkers(ctx goctx.Context) error {
+	workerEntities, err := m.swRepo.GetAllWorkers(ctx)
 	if err != nil {
 		return err
 	}
@@ -93,13 +92,13 @@ func (m *spotManager) startWorkers() error {
 	for _, workerEntity := range workerEntities {
 		worker := m.mapSymbolWorker[workerEntity.Symbol]
 		startC := make(chan error)
-		go worker.Run(startC)
+		go worker.Run(context.Child(ctx, fmt.Sprintf("[spot-worker] %s", workerEntity.Symbol)), startC)
 		if err := <-startC; err != nil {
 			return err
 		}
 	}
 
-	log.Infof("start %d workers", len(workerEntities))
+	logger.Infof(ctx, "[startWorkers] start %d workers", len(workerEntities))
 
 	return nil
 }

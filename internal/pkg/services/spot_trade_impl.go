@@ -1,6 +1,8 @@
 package services
 
 import (
+	"context"
+
 	"github.com/adshao/go-binance/v2"
 
 	b "farmer/internal/pkg/binance"
@@ -35,10 +37,10 @@ func SpotTradeServiceInstance() ISpotTradeService {
 	return spotTradeSvc
 }
 
-func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pkgErr.DomainError) {
+func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotTradingPairInfo, *pkgErr.DomainError) {
 	var ret []*en.SpotTradingPairInfo
 
-	workers, err := s.spotWorkerRepo.GetAllWorkers()
+	workers, err := s.spotWorkerRepo.GetAllWorkers(ctx)
 	if err != nil {
 		return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(err)
 	}
@@ -63,7 +65,7 @@ func (s *spotTradeService) GetTradingPairsInfo() ([]*en.SpotTradingPairInfo, *pk
 			info.TotalUnitBought = totalUnitBought
 		}
 
-		if price, err := b.GetSpotPrice(s.bclient, w.Symbol); err != nil {
+		if price, err := b.GetSpotPrice(ctx, s.bclient, w.Symbol); err != nil {
 			return nil, err
 		} else {
 			info.QuoteAmount = info.UnitNotional * (float64(info.UnitBuyAllowed) - float64(info.TotalUnitBought))

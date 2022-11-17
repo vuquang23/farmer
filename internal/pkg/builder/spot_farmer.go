@@ -1,6 +1,7 @@
 package builder
 
 import (
+	goctx "context"
 	"errors"
 	"net/http"
 
@@ -11,6 +12,7 @@ import (
 	cfg "farmer/internal/pkg/config"
 	spotmanager "farmer/internal/pkg/spot_manager"
 	"farmer/internal/pkg/telebot"
+	"farmer/internal/pkg/utils/context"
 )
 
 type ISpotFarmerSystem interface {
@@ -38,14 +40,16 @@ func NewSpotFarmerSystem(m spotmanager.ISpotManager, t telebot.ITeleBot) (ISpotF
 }
 
 func (sys *spotFarmerSystem) Run() error {
+	ctx := goctx.Background()
+
 	startC := make(chan error)
-	go sys.m.Run(startC)
+	go sys.m.Run(context.Child(ctx, "spot manager"), startC)
 	err := <-startC
 	if err != nil {
 		return err
 	}
 
-	go sys.t.Run()
+	go sys.t.Run(context.Child(ctx, "telebot"))
 
 	return sys.server.Run(cfg.Instance().Http.BindAddress)
 }

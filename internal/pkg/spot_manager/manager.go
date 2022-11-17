@@ -1,7 +1,9 @@
 package spotmanager
 
+import "context"
+
 type ISpotManager interface {
-	Run(startC chan<- error)
+	Run(ctx context.Context, startC chan<- error)
 
 	CheckHealth() map[string]string
 }

@@ -10,7 +10,6 @@ import (
 
 	"github.com/adshao/go-binance/v2"
 	"github.com/adshao/go-binance/v2/futures"
-	"github.com/gin-gonic/gin"
 
 	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/enum"
@@ -48,7 +47,7 @@ func WaveTrendMomentumServiceInstance() IWavetrendMomentumService {
 }
 
 func (s *wtMomentumService) Calculate(
-	ctx *gin.Context, market enum.Market, symbolList []string, interval string,
+	ctx context.Context, market enum.Market, symbolList []string, interval string,
 ) ([]*entities.WavetrendMomentum, *errors.DomainError) {
 	batch := 30
 	ret := []*entities.WavetrendMomentum{}
@@ -86,13 +85,13 @@ func (s *wtMomentumService) setMap(symbol string, value float64) {
 }
 
 func (s *wtMomentumService) calcForSymbol(
-	ctx *gin.Context, wg *sync.WaitGroup, market enum.Market, symbol string, interval string,
+	ctx context.Context, wg *sync.WaitGroup, market enum.Market, symbol string, interval string,
 ) {
 	defer wg.Done()
 
 	candles, err := s.queryKline(ctx, market, symbol, interval)
 	if err != nil {
-		logger.FromGinCtx(ctx).Sugar().Error(err)
+		logger.Error(ctx, err)
 		return
 	}
 
@@ -103,7 +102,7 @@ func (s *wtMomentumService) calcForSymbol(
 }
 
 func (s *wtMomentumService) queryKline(
-	ctx *gin.Context, market enum.Market, symbol string, interval string,
+	ctx context.Context, market enum.Market, symbol string, interval string,
 ) ([]*entities.MinimalKline, *errors.DomainError) {
 	pass := uint64(600) // 600 candles til now
 	switch market {
@@ -112,7 +111,7 @@ func (s *wtMomentumService) queryKline(
 			Symbol(symbol + "USDT").
 			Interval(interval).
 			Limit(int(pass)).
-			Do(context.Background())
+			Do(ctx)
 		if err != nil {
 			return nil, errors.NewDomainErrorUnknown(err)
 		}
@@ -122,7 +121,7 @@ func (s *wtMomentumService) queryKline(
 			Symbol((symbol + "USDT")).
 			Interval(interval).
 			Limit(int(pass)).
-			Do(context.Background())
+			Do(ctx)
 		if err != nil {
 			return nil, errors.NewDomainErrorUnknown(err)
 		}
