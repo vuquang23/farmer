@@ -65,7 +65,7 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 			info.TotalUnitBought = totalUnitBought
 		}
 
-		if price, err := b.GetSpotPrice(s.bclient, w.Symbol); err != nil {
+		if price, err := b.GetSpotPrice(ctx, s.bclient, w.Symbol); err != nil {
 			return nil, err
 		} else {
 			info.QuoteAmount = info.UnitNotional * (float64(info.UnitBuyAllowed) - float64(info.TotalUnitBought))
