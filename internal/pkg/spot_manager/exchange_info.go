@@ -42,11 +42,6 @@ func (m *spotManager) updateExchangeInfo(ctx context.Context) error {
 		return err
 	}
 	for _, s := range exchangeInfo.Symbols {
-		worker, ok := m.mapSymbolWorker[s.Symbol]
-		if !ok {
-			continue
-		}
-
 		var (
 			pricePrecision, qtyPrecision int
 			minNotional, minQty          float64
@@ -77,12 +72,34 @@ func (m *spotManager) updateExchangeInfo(ctx context.Context) error {
 			}
 		}
 
-		worker.SetExchangeInfo(entities.SpotExchangeInfo{
+		exchangeInfo := entities.SpotExchangeInfo{
 			PricePrecision: pricePrecision,
 			QtyPrecision:   qtyPrecision,
 			MinQty:         minQty,
 			MinNotional:    minNotional,
-		})
+		}
+		m.SetExchangeInfo(s.Symbol, exchangeInfo)
+
+		worker, ok := m.mapSymbolWorker[s.Symbol]
+		if ok {
+			worker.SetExchangeInfo(exchangeInfo)
+		}
+
 	}
 	return nil
+}
+
+func (m *spotManager) SetExchangeInfo(symbol string, info entities.SpotExchangeInfo) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.mapExchangeInfo[symbol] = info
+}
+
+func (m *spotManager) GetExchangeInfo(symbol string) (entities.SpotExchangeInfo, bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	ret, ok := m.mapExchangeInfo[symbol]
+	return ret, ok
 }

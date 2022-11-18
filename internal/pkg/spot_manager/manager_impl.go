@@ -2,22 +2,29 @@ package spotmanager
 
 import (
 	goctx "context"
+	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/adshao/go-binance/v2"
 
 	bn "farmer/internal/pkg/binance"
+	"farmer/internal/pkg/constants"
+	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/repositories"
 	sw "farmer/internal/pkg/spot_worker"
 	"farmer/internal/pkg/utils/context"
 	"farmer/internal/pkg/utils/logger"
 	wtp "farmer/internal/pkg/wavetrend"
+	errPkg "farmer/pkg/errors"
 )
 
 type spotManager struct {
+	mu              *sync.Mutex
 	bclient         *binance.Client
 	mapSymbolWorker map[string]sw.ISpotWorker // eg for symbol: BTCUSDT, ETHUSDT...
 	swRepo          repositories.ISpotWorkerRepository
+	mapExchangeInfo map[string]entities.SpotExchangeInfo
 }
 
 var manager *spotManager
@@ -25,9 +32,11 @@ var manager *spotManager
 func InitSpotManager(bclient *binance.Client, swRepo repositories.ISpotWorkerRepository) {
 	if manager == nil {
 		manager = &spotManager{
+			mu:              &sync.Mutex{},
 			bclient:         bclient,
 			mapSymbolWorker: make(map[string]sw.ISpotWorker),
 			swRepo:          swRepo,
+			mapExchangeInfo: make(map[string]entities.SpotExchangeInfo),
 		}
 	}
 }
@@ -37,11 +46,6 @@ func SpotManagerInstance() ISpotManager {
 }
 
 func (m *spotManager) Run(ctx goctx.Context, startC chan<- error) {
-	if err := m.loadWorkers(ctx); err != nil {
-		startC <- err
-		return
-	}
-
 	doneC := make(chan error)
 	go m.updateExchangeInfoPeriodically(context.Child(ctx, "spot manager update exchange info periodically"), doneC)
 	if err := <-doneC; err != nil {
@@ -59,46 +63,39 @@ func (m *spotManager) Run(ctx goctx.Context, startC chan<- error) {
 	startC <- nil
 }
 
-func (m *spotManager) loadWorkers(ctx goctx.Context) error {
-	logger.Info(ctx, "[loadWorkers] start to load workers")
-
+func (m *spotManager) startWorkers(ctx goctx.Context) error {
 	workerStatus, err := m.swRepo.GetAllWorkerStatus(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, w := range workerStatus {
-		worker := sw.NewSpotWorker(
-			w.ID,
-			bn.BinanceSpotClientInstance(),
-			wtp.WavetrendProviderInstance(),
-			repositories.SpotTradeRepositoryInstance(),
-			repositories.SpotWorkerRepositoryInstance(),
-		)
-		worker.SetWorkerSettingAndStatus(*w)
-		m.mapSymbolWorker[w.Symbol] = worker
-	}
-
-	return nil
-}
-
-func (m *spotManager) startWorkers(ctx goctx.Context) error {
-	workerEntities, err := m.swRepo.GetAllWorkers(ctx)
-	if err != nil {
-		return err
-	}
-
-	// all worker should start OK
-	for _, workerEntity := range workerEntities {
-		worker := m.mapSymbolWorker[workerEntity.Symbol]
-		startC := make(chan error)
-		go worker.Run(context.Child(ctx, fmt.Sprintf("[spot-worker] %s", workerEntity.Symbol)), startC)
-		if err := <-startC; err != nil {
+		if err := m.startWorker(ctx, w); err != nil {
 			return err
 		}
 	}
 
-	logger.Infof(ctx, "[startWorkers] start %d workers", len(workerEntities))
+	logger.Infof(ctx, "[startWorkers] start %d workers", len(workerStatus))
+
+	return nil
+}
+
+func (m *spotManager) startWorker(ctx goctx.Context, w *entities.SpotWorkerStatus) error {
+	worker := sw.NewSpotWorker(
+		w.ID,
+		bn.BinanceSpotClientInstance(),
+		wtp.WavetrendProviderInstance(),
+		repositories.SpotTradeRepositoryInstance(),
+		repositories.SpotWorkerRepositoryInstance(),
+	)
+	worker.SetWorkerSettingAndStatus(*w)
+	m.mapSymbolWorker[w.Symbol] = worker
+
+	startC := make(chan error)
+	go worker.Run(context.Child(ctx, fmt.Sprintf("[spot-worker] %s", w.Symbol)), startC)
+	if err := <-startC; err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -111,4 +108,51 @@ func (m *spotManager) CheckHealth() map[string]string {
 	}
 
 	return ret
+}
+
+func (m *spotManager) CreateNewWorker(ctx goctx.Context, params *entities.CreateNewSpotWorkerParams) error {
+	exchangeInfo, ok := m.GetExchangeInfo(params.Symbol)
+	if !ok {
+		return errPkg.NewDomainErrorNotFound(nil, constants.FieldSymbol)
+	}
+
+	notionalOnDownTrend := params.UnitNotional * constants.UnitBuyOnDowntrend
+	notionalOnUpTrend := params.UnitNotional * constants.UnitBuyOnUpTrend
+	if exchangeInfo.MinNotional > notionalOnDownTrend && exchangeInfo.MinNotional > notionalOnUpTrend {
+		err := fmt.Errorf(
+			"err constraint on min notional. min notional: %v | notional on downtrend: %v | notional on uptrend: %v",
+			exchangeInfo.MinNotional, notionalOnDownTrend, notionalOnUpTrend,
+		)
+		logger.Error(ctx, err)
+		return err
+	}
+
+	w, infraErr := m.swRepo.Create(ctx, &entities.SpotWorker{
+		Symbol:         params.Symbol,
+		UnitBuyAllowed: params.UnitBuyAllowed,
+		UnitNotional:   params.UnitNotional,
+	})
+	if infraErr != nil {
+		return infraErr
+	}
+
+	if err := m.startWorker(ctx, &entities.SpotWorkerStatus{SpotWorker: *w}); err != nil {
+		// do not expected error here
+		if infraErr := m.swRepo.DeleteByID(ctx, w.ID); infraErr != nil {
+			return infraErr
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (m *spotManager) StopBot(ctx goctx.Context, params *entities.StopBotParams) error {
+	w, ok := m.mapSymbolWorker[params.Symbol]
+	if !ok {
+		return errors.New("symbol is invalid")
+	}
+	w.SetStopSignal()
+	return nil
 }
