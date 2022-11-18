@@ -24,3 +24,18 @@ func (r *CreateNewSpotWorkerReq) Normalize() *CreateNewSpotWorkerReq {
 	r.Symbol = strings.ToUpper(r.Symbol)
 	return r
 }
+
+type StopBotReq struct {
+	Symbol string
+}
+
+func (r *StopBotReq) Normalize() *StopBotReq {
+	r.Symbol = strings.ToUpper(r.Symbol)
+	return r
+}
+
+func (r *StopBotReq) ToStopBotParams() *entities.StopBotParams {
+	return &entities.StopBotParams{
+		Symbol: r.Symbol,
+	}
+}

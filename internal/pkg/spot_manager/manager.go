@@ -11,4 +11,5 @@ type ISpotManager interface {
 
 	CheckHealth() map[string]string
 	CreateNewWorker(ctx context.Context, params *entities.CreateNewSpotWorkerParams) error
+	StopBot(ctx context.Context, params *entities.StopBotParams) error
 }

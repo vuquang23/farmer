@@ -2,6 +2,7 @@ package spotmanager
 
 import (
 	goctx "context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -144,5 +145,14 @@ func (m *spotManager) CreateNewWorker(ctx goctx.Context, params *entities.Create
 		return err
 	}
 
+	return nil
+}
+
+func (m *spotManager) StopBot(ctx goctx.Context, params *entities.StopBotParams) error {
+	w, ok := m.mapSymbolWorker[params.Symbol]
+	if !ok {
+		return errors.New("symbol is invalid")
+	}
+	w.SetStopSignal()
 	return nil
 }

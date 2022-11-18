@@ -100,6 +100,7 @@ func (t *teleBot) setupRoute() {
 	t.m["get!/health"] = t.healthCheck
 
 	t.m["post!/spot"] = t.createNewSpotWorker
+	t.m["post!/spot/stop"] = t.stopBot
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		args := strings.Fields(c.Text())
@@ -182,7 +183,39 @@ func (t *teleBot) createNewSpotWorker(c tb.Context) {
 		}
 
 		params := req.Normalize().ToCreateNewSpotWorkerParams()
-		if err := spotmanager.SpotManagerInstance().CreateNewWorker(context.Child(ctx, fmt.Sprintf("[create-new-worker] %s", params.Symbol)), params); err != nil {
+		if err := spotmanager.SpotManagerInstance().CreateNewWorker(
+			context.Child(ctx, fmt.Sprintf("[create-new-worker] %s", params.Symbol)),
+			params,
+		); err != nil {
+			return message(err)
+		}
+
+		return message("ok")
+	}
+
+	msg := f()
+	c.Send(msg)
+}
+
+func (t *teleBot) stopBot(c tb.Context) {
+	f := func() string {
+		ctx := goctx.Background()
+		args := strings.Fields(c.Text())
+		if len(args) == 1 {
+			return "missing required body"
+		}
+
+		var req StopBotReq
+		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
+			logger.Error(ctx, err)
+			return message(err)
+		}
+
+		params := req.Normalize().ToStopBotParams()
+		if err := spotmanager.SpotManagerInstance().StopBot(
+			context.Child(ctx, fmt.Sprintf("[stop-bot] %s", params.Symbol)),
+			params,
+		); err != nil {
 			return message(err)
 		}
 

@@ -52,8 +52,8 @@ func NewWavetrendWorker(svcName string, bclient *binance.Client, klineMsgChan <-
 }
 
 func (w *worker) Stop() {
-	atomic.StoreUint32(w.stopSignal, 1)
 	w.cancelSubscribe()
+	atomic.StoreUint32(w.stopSignal, 1)
 }
 
 func (w *worker) getStopSignal() bool {
@@ -112,7 +112,10 @@ func (w *worker) Run(ctx context.Context, done chan<- error) {
 	periodMilis := w.setting.timeFrameUnixMili
 	for !w.getStopSignal() {
 		// receive data from wavetrend provider
-		msg := <-w.klineMsgChan
+		msg, ok := <-w.klineMsgChan
+		if !ok {
+			break
+		}
 		msg.Ack()
 		currentCandle := binance.Kline{}
 		err := json.Unmarshal(msg.Payload, &currentCandle)
@@ -154,6 +157,8 @@ func (w *worker) Run(ctx context.Context, done chan<- error) {
 			done <- nil
 		})
 	}
+
+	logger.Info(ctx, "[Run] stopped")
 }
 
 func (w *worker) updateWaveTrendForNextInterval(ctx context.Context, fromOpenTime uint64, limit uint64) error {

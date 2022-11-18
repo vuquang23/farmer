@@ -36,6 +36,8 @@ func (w *spotWorker) runMainProcessor(ctx context.Context) {
 			w.stt.storeHealth(time.Now())
 		}
 	}
+
+	logger.Info(ctx, "[runMainProcessor] stopped")
 }
 
 func (w *spotWorker) analyzeExceptionsAndSell(ctx context.Context) {

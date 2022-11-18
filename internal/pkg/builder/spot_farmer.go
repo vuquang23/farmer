@@ -42,14 +42,14 @@ func NewSpotFarmerSystem(m spotmanager.ISpotManager, t telebot.ITeleBot) (ISpotF
 func (sys *spotFarmerSystem) Run() error {
 	ctx := goctx.Background()
 
+	go sys.t.Run(context.Child(ctx, "telebot"))
+
 	startC := make(chan error)
 	go sys.m.Run(context.Child(ctx, "spot manager"), startC)
 	err := <-startC
 	if err != nil {
 		return err
 	}
-
-	go sys.t.Run(context.Child(ctx, "telebot"))
 
 	return sys.server.Run(cfg.Instance().Http.BindAddress)
 }

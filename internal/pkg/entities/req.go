@@ -5,3 +5,7 @@ type CreateNewSpotWorkerParams struct {
 	UnitBuyAllowed uint64
 	UnitNotional   float64
 }
+
+type StopBotParams struct {
+	Symbol string
+}
