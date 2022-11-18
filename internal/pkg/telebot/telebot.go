@@ -100,7 +100,7 @@ func (t *teleBot) setupRoute() {
 	t.m["get!/health"] = t.healthCheck
 
 	t.m["post!/spot"] = t.createNewSpotWorker
-	t.m["post!/spot/stop"] = t.stopBot
+	t.m["post!/spot/stop"] = t.stopSpotBot
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		args := strings.Fields(c.Text())
@@ -197,7 +197,7 @@ func (t *teleBot) createNewSpotWorker(c tb.Context) {
 	c.Send(msg)
 }
 
-func (t *teleBot) stopBot(c tb.Context) {
+func (t *teleBot) stopSpotBot(c tb.Context) {
 	f := func() string {
 		ctx := goctx.Background()
 		args := strings.Fields(c.Text())
