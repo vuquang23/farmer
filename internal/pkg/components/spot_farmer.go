@@ -11,16 +11,18 @@ import (
 	wtp "farmer/internal/pkg/wavetrend"
 )
 
-func InitSpotFarmerComponents(isTest bool) {
+func InitSpotFarmerComponents(isTest bool) error {
 	// logger
-	logger.InitLogger()
+	if err := logger.InitLogger(); err != nil {
+		return err
+	}
 
 	// binance client
 	binance.InitBinanceSpotClient(isTest)
 
 	// db
 	if err := db.InitDB(); err != nil {
-		panic(err)
+		return err
 	}
 
 	// repo
@@ -35,7 +37,9 @@ func InitSpotFarmerComponents(isTest bool) {
 	)
 
 	// telebot
-	telebot.InitTeleBot(services.SpotTradeServiceInstance())
+	if err := telebot.InitTeleBot(services.SpotTradeServiceInstance()); err != nil {
+		return err
+	}
 
 	// wavetrend provider
 	wtp.InitWavetrendProvider()
@@ -45,4 +49,6 @@ func InitSpotFarmerComponents(isTest bool) {
 		binance.BinanceSpotClientInstance(),
 		repositories.SpotWorkerRepositoryInstance(),
 	)
+
+	return nil
 }

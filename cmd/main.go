@@ -58,7 +58,9 @@ func spotFarmerCommand() *cli.Command {
 				return errors.New("can not load config")
 			}
 
-			components.InitSpotFarmerComponents(isTest)
+			if err := components.InitSpotFarmerComponents(isTest); err != nil {
+				return err
+			}
 
 			farmer, err := builder.NewSpotFarmerSystem(spotmanager.SpotManagerInstance(), telebot.TeleBotInstance())
 			if err != nil {
