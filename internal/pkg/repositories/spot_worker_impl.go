@@ -55,7 +55,7 @@ func (r *spotWorkerRepository) GetAllWorkerStatus(ctx context.Context) ([]*entit
 
 func (r *spotWorkerRepository) UpdateUnitNotionalByID(ctx context.Context, ID uint64, val float64) *errors.InfraError {
 	err := r.db.Table("spot_workers").
-		Where("id = ?").
+		Where("id = ?", ID).
 		Update("unit_notional", gorm.Expr("unit_notional + ?", val)).Error
 	if err != nil {
 		logger.Error(ctx, err)
