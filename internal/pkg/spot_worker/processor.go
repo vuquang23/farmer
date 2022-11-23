@@ -202,7 +202,7 @@ func (w *spotWorker) createSellOrders(ctx context.Context, sSignal *en.SpotSellS
 			); err == nil {
 				logger.Infof(
 					ctx, "[createSellOrders] sell successfully. qty: %s | price: %f | ref: %d | M1 currentTci: %f | M1 currentDifWavetrend: %f",
-					order.Qty, price, order.Ref, currentTci, currentDifWavetrend,
+					order.Qty, price, order.Ref.ID, currentTci, currentDifWavetrend,
 				)
 
 				ret = append(ret, &en.CreateSpotSellOrderResponse{
