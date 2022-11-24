@@ -40,9 +40,9 @@ func SpotTradeServiceInstance() ISpotTradeService {
 func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotTradingPairInfo, *pkgErr.DomainError) {
 	var ret []*en.SpotTradingPairInfo
 
-	workers, err := s.spotWorkerRepo.GetAllWorkers(ctx)
-	if err != nil {
-		return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(err)
+	workers, infraErr := s.spotWorkerRepo.GetAllWorkers(ctx)
+	if infraErr != nil {
+		return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 	}
 
 	for _, w := range workers {
@@ -52,26 +52,25 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 			UnitNotional:   w.UnitNotional,
 		}
 
-		if usdBenefit, err := s.spotTradeRepo.GetTotalQuoteBenefit(w.ID); err != nil {
-			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(err)
-		} else {
-			info.UsdBenefit = usdBenefit
+		usdBenefit, infraErr := s.spotTradeRepo.GetTotalQuoteBenefit(w.ID)
+		if infraErr != nil {
+			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 		}
+		info.UsdBenefit = usdBenefit
 
-		if baseAmount, totalUnitBought, err := s.spotTradeRepo.GetBaseAmountAndTotalUnitBought(w.ID); err != nil {
-			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(err)
-		} else {
-			info.BaseAmount = baseAmount
-			info.TotalUnitBought = totalUnitBought
+		baseAmount, totalUnitBought, infraErr := s.spotTradeRepo.GetBaseAmountAndTotalUnitBought(w.ID)
+		if infraErr != nil {
+			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 		}
+		info.BaseAmount = baseAmount
+		info.TotalUnitBought = totalUnitBought
 
-		if price, err := b.GetSpotPrice(ctx, s.bclient, w.Symbol); err != nil {
-			return nil, err
-		} else {
-			info.QuoteAmount = info.UnitNotional * (float64(info.UnitBuyAllowed) - float64(info.TotalUnitBought))
-			info.CurrentUsdValue = info.QuoteAmount + info.BaseAmount*price + info.UsdBenefit
-			info.CurrentUsdValueChanged = info.CurrentUsdValue - info.UnitNotional*float64(info.UnitBuyAllowed)
+		price, domainErr := b.GetSpotPrice(ctx, s.bclient, w.Symbol)
+		if domainErr != nil {
+			return nil, domainErr
 		}
+		info.QuoteAmount = info.UnitNotional * (float64(info.UnitBuyAllowed) - float64(info.TotalUnitBought))
+		info.CurrentUsdValue = info.QuoteAmount + info.BaseAmount*price
 
 		ret = append(ret, info)
 	}
