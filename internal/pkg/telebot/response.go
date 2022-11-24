@@ -15,8 +15,7 @@ type (
 	}
 
 	GetSpotAccountInfoResponse struct {
-		Pairs                       []*SpotPairInfo
-		TotalUsdBenefit             float64
-		CurrentTotalUsdValueChanged float64
+		Pairs           []*SpotPairInfo
+		TotalUsdBenefit float64
 	}
 )
