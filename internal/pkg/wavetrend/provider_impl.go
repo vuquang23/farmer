@@ -149,11 +149,11 @@ func (p *wavetrendProvider) startKlineWSConnection(ctx goctx.Context, svcName st
 		// polling
 		select {
 		case <-stopConnC:
-			logger.Info(ctx, "[startKlineWSConnection] in stopConnC...")
+			logger.Info(ctx, "[startKlineWSConnection] receive signal from stopConnC ...")
 			stopC <- struct{}{}
 			return
 		case <-doneC:
-			logger.Info(ctx, "[startKlineWSConnection] in doneC...")
+			logger.Info(ctx, "[startKlineWSConnection] receive signal from doneC ...")
 			time.Sleep(2 * time.Second)
 		}
 

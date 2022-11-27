@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/adshao/go-binance/v2"
+	"github.com/sethvargo/go-retry"
 
 	b "farmer/internal/pkg/binance"
 	c "farmer/internal/pkg/constants"
@@ -182,7 +183,7 @@ func (w *spotWorker) createSellOrders(ctx context.Context, sSignal *en.SpotSellS
 		tempNotSold := []*en.SpotSellOrder{}
 		for _, order := range notSold {
 			if order.Price*(1-down*2/100) > price {
-				logger.Infof(ctx, "[createSellOrders] current price is too low compared to expected. expected: %f | current: %f", order.Price, price)
+				logger.Warnf(ctx, "[createSellOrders] current price is too low compared to expected. expected: %f | current: %f", order.Price, price)
 				tempNotSold = append(tempNotSold, order)
 				continue
 			}
@@ -190,36 +191,34 @@ func (w *spotWorker) createSellOrders(ctx context.Context, sSignal *en.SpotSellS
 			// ignore outdated status here.
 			currentTci, _ := w.wavetrendProvider.GetCurrentTci(m1SvcName)
 			currentDifWavetrend, _ := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
-
 			logger.Infof(
 				ctx, "[createSellOrders] try to sell with qty: %s | price: %f | M1 currentTci: %f | M1 currentDifWavetrend: %f",
 				order.Qty, price, currentTci, currentDifWavetrend,
 			)
 
-			if res, err := b.CreateSpotSellOrder(
+			// create sell order
+			res, err := b.CreateSpotSellOrder(
 				ctx, w.bclient, w.setting.symbol, order.Qty,
 				maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
-			); err == nil {
-				logger.Infof(
-					ctx, "[createSellOrders] sell successfully. qty: %s | price: %f | ref: %d | M1 currentTci: %f | M1 currentDifWavetrend: %f",
-					order.Qty, price, order.Ref.ID, currentTci, currentDifWavetrend,
-				)
-
-				ret = append(ret, &en.CreateSpotSellOrderResponse{
-					BinanceResponse: res,
-					Order:           order,
-				})
-			} else {
-				logger.Warnf(ctx, "[createSellOrders] %s", err)
+			)
+			if err != nil {
 				tempNotSold = append(tempNotSold, order)
+				continue
 			}
+
+			logger.Infof(
+				ctx, "[createSellOrders] sell successfully. qty: %s | price: %f | ref: %d | M1 currentTci: %f | M1 currentDifWavetrend: %f",
+				order.Qty, price, order.Ref.ID, currentTci, currentDifWavetrend,
+			)
+			ret = append(ret, &en.CreateSpotSellOrderResponse{
+				BinanceResponse: res,
+				Order:           order,
+			})
 		}
 		notSold = tempNotSold
 		if len(notSold) == 0 {
 			break
 		}
-
-		time.Sleep(time.Second)
 	}
 
 	return ret, nil
@@ -230,6 +229,7 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 		sellTrades       []*en.SpotTrade
 		updateUnitBought = 0
 		benefit          = float64(0)
+		backoff          = retry.NewConstant(50 * time.Millisecond)
 	)
 
 	for _, r := range res {
@@ -258,24 +258,42 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 	/// in memory
 	w.setting.updateUnitNotional(val)
 	/// in db
-	for i := 0; i < 3; i++ {
-		err := w.spotWorkerRepo.UpdateUnitNotionalByID(ctx, w.ID, val)
-		if err == nil {
-			break
+	tried := 0
+	_ = retry.Do(ctx, retry.WithMaxRetries(3, backoff), func(ctx context.Context) error {
+		defer func() {
+			tried++
+		}()
+		if tried > 0 {
+			logger.Infof(ctx, "[afterSell] retry update unit notional in DB %d ...", tried)
 		}
-		logger.Infof(ctx, "[afterSell] retry %d...", i+1)
-		time.Sleep(time.Second)
-	}
+
+		err := w.spotWorkerRepo.UpdateUnitNotionalByID(ctx, w.ID, val)
+		if err != nil {
+			logger.Error(ctx, err)
+			return err
+		}
+
+		return nil
+	})
 
 	// should not be failed here
-	for i := 0; i < 3; i++ {
-		err := w.spotTradeRepo.CreateSellOrders(ctx, sellTrades)
-		if err == nil {
-			break
+	tried = 0
+	_ = retry.Do(ctx, retry.WithMaxRetries(3, backoff), func(ctx context.Context) error {
+		defer func() {
+			tried++
+		}()
+		if tried > 0 {
+			logger.Infof(ctx, "[afterSell] retry create sell orders in DB %d ...", tried)
 		}
-		logger.Infof(ctx, "[afterSell] retry %d...", i+1)
-		time.Sleep(time.Second)
-	}
+
+		err := w.spotTradeRepo.CreateSellOrders(ctx, sellTrades)
+		if err != nil {
+			logger.Info(ctx, err)
+			return err
+		}
+
+		return nil
+	})
 
 	return nil
 }
@@ -399,8 +417,16 @@ func (w *spotWorker) afterBuy(ctx context.Context, res *binance.CreateOrderRespo
 	w.stt.updateTotalUnitBought(unitBought)
 	w.stt.storeLastBoughtAt(time.Now())
 
-	// update DB
-	for i := 0; i < 3; i++ {
+	tried := 0
+	backoff := retry.NewConstant(50 * time.Millisecond)
+	_ = retry.Do(ctx, retry.WithMaxRetries(3, backoff), func(ctx context.Context) error {
+		defer func() {
+			tried++
+		}()
+		if tried > 0 {
+			logger.Infof(ctx, "[afterBuy] retry %d...", tried)
+		}
+
 		err := w.spotTradeRepo.CreateBuyOrder(ctx, en.SpotTrade{
 			Symbol:              w.setting.symbol,
 			Side:                "BUY",
@@ -412,12 +438,13 @@ func (w *spotWorker) afterBuy(ctx context.Context, res *binance.CreateOrderRespo
 			IsDone:              false,
 			UnitBought:          uint64(unitBought),
 		})
-		if err == nil {
-			break
+		if err != nil {
+			logger.Error(ctx, err)
+			return err
 		}
-		logger.Infof(ctx, "retry %d...", i+1)
-		time.Sleep(time.Second)
-	}
+
+		return nil
+	})
 }
 
 func (w *spotWorker) createBuyOrder(ctx context.Context, bSignal *en.SpotBuySignal) (*binance.CreateOrderResponse, *pkgErr.DomainError) {

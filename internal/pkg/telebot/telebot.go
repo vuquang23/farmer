@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sethvargo/go-retry"
 	"github.com/tidwall/pretty"
 	tb "gopkg.in/telebot.v3"
 
@@ -79,15 +80,27 @@ func (t *teleBot) Run(ctx goctx.Context) {
 
 // SendMsg sending a message to master
 func (ltb *teleBot) SendMsg(ctx context.Context, msg interface{}) {
-	for i := 0; i < 3; i++ {
+	var (
+		tried   = 0
+		backoff = retry.NewFibonacci(1 * time.Second)
+	)
+
+	_ = retry.Do(ctx, retry.WithMaxRetries(2, backoff), func(ctx goctx.Context) error {
+		defer func() {
+			tried++
+		}()
+		if tried > 0 {
+			logger.Infof(ctx, "[SendMsg] retry %d ...", tried)
+		}
+
 		_, err := ltb.bot.Send(ltb.group, msg)
 		if err != nil {
-			logger.Info(ctx, "[SendMsg] %s", err)
-			time.Sleep(3 * time.Second)
-			continue
+			logger.Error(ctx, "[SendMsg] %s", err)
+			return err
 		}
-		return
-	}
+
+		return nil
+	})
 }
 
 // SendMsgWithFormat sending a message with format to master

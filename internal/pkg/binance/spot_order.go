@@ -17,8 +17,8 @@ func CreateSpotBuyOrder(ctx context.Context, client *binance.Client, symbol stri
 		TimeInForce(binance.TimeInForceTypeFOK).Quantity(qty).Price(price).
 		Do(ctx)
 	if err != nil {
+		logger.Error(ctx, err)
 		domainErr := errors.NewDomainErrorCreateBuyOrderFailed(err)
-		logger.Error(ctx, domainErr)
 		return nil, domainErr
 	}
 
@@ -37,8 +37,8 @@ func CreateSpotSellOrder(ctx context.Context, client *binance.Client, symbol str
 		TimeInForce(binance.TimeInForceTypeFOK).Quantity(qty).Price(price).
 		Do(ctx)
 	if err != nil {
+		logger.Error(ctx, err)
 		domainErr := errors.NewDomainErrorCreateSellOrderFailed(err)
-		logger.Error(ctx, domainErr)
 		return nil, domainErr
 	}
 
