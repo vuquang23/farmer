@@ -6,7 +6,8 @@ type (
 		Symbol          string
 		Capital         float64
 		CurrentUSDValue float64
-		BenefitUSD      float64 // BenefitUSD = CurrentUsdValue - Capital
+		BenefitUSD      float64
+		ChangedUSD      float64
 		BaseAmount      float64
 		QuoteAmount     float64
 		UnitBuyAllowed  uint64
@@ -17,5 +18,6 @@ type (
 	GetSpotAccountInfoResponse struct {
 		Pairs           []*SpotPairInfo
 		TotalBenefitUSD float64
+		TotalChangedUSD float64
 	}
 )

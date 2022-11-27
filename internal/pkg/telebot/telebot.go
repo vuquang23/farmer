@@ -148,29 +148,36 @@ func (t *teleBot) getSpotAccountInfo(c tb.Context) {
 }
 
 func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
-	p := []*SpotPairInfo{}
-	totalBenefitUSD := 0.0
-	N := 10000.
+	var (
+		p               = []*SpotPairInfo{}
+		totalChangedUSD = 0.0
+		totalBenefitUSD = 0.0
+		N               = 10000.
+	)
 
 	for _, e := range en {
-		p = append(p, &SpotPairInfo{
+		info := SpotPairInfo{
 			Symbol:          e.Symbol,
 			Capital:         e.Capital,
 			CurrentUSDValue: math.Round(e.CurrentUSDValue*N) / N,
 			BenefitUSD:      math.Round(e.BenefitUSD*N) / N,
+			ChangedUSD:      math.Round((e.CurrentUSDValue-e.Capital)*N) / N,
 			BaseAmount:      math.Round(e.BaseAmount*N) / N,
 			QuoteAmount:     math.Round(e.QuoteAmount*N) / N,
 			UnitBuyAllowed:  e.UnitBuyAllowed,
 			UnitNotional:    math.Round(e.UnitNotional*N) / N,
 			TotalUnitBought: e.TotalUnitBought,
-		})
+		}
+		p = append(p, &info)
 
-		totalBenefitUSD += e.BenefitUSD
+		totalBenefitUSD += info.BenefitUSD
+		totalChangedUSD += info.ChangedUSD
 	}
 
 	return &GetSpotAccountInfoResponse{
 		Pairs:           p,
 		TotalBenefitUSD: math.Round(totalBenefitUSD*N) / N,
+		TotalChangedUSD: math.Round(totalChangedUSD*N) / N,
 	}
 }
 
