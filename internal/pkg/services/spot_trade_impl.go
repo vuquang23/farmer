@@ -48,29 +48,30 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 	for _, w := range workers {
 		info := &en.SpotTradingPairInfo{
 			Symbol:         w.Symbol,
+			Capital:        w.Capital,
 			UnitBuyAllowed: w.UnitBuyAllowed,
 			UnitNotional:   w.UnitNotional,
 		}
 
-		usdBenefit, infraErr := s.spotTradeRepo.GetTotalQuoteBenefit(w.ID)
+		benefitUSD, infraErr := s.spotTradeRepo.GetTotalQuoteBenefit(w.ID)
 		if infraErr != nil {
 			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 		}
-		info.UsdBenefit = usdBenefit
+		info.BenefitUSD = benefitUSD
 
-		baseAmount, totalUnitBought, infraErr := s.spotTradeRepo.GetBaseAmountAndTotalUnitBought(w.ID)
+		aggregated, infraErr := s.spotTradeRepo.GetAggregatedNotSoldBuyOrders(ctx, w.ID)
 		if infraErr != nil {
 			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 		}
-		info.BaseAmount = baseAmount
-		info.TotalUnitBought = totalUnitBought
+		info.BaseAmount = aggregated.TotalBaseAmount
+		info.TotalUnitBought = aggregated.TotalUnitBought
 
+		info.QuoteAmount = info.Capital + info.BenefitUSD - aggregated.TotalCummulativeQuoteQty
 		price, domainErr := b.GetSpotPrice(ctx, s.bclient, w.Symbol)
 		if domainErr != nil {
 			return nil, domainErr
 		}
-		info.QuoteAmount = info.UnitNotional * (float64(info.UnitBuyAllowed) - float64(info.TotalUnitBought))
-		info.CurrentUsdValue = info.QuoteAmount + info.BaseAmount*price
+		info.CurrentUSDValue = info.QuoteAmount + info.BaseAmount*price
 
 		ret = append(ret, info)
 	}

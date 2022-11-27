@@ -6,6 +6,7 @@ type (
 		Symbol         string // pair
 		UnitBuyAllowed uint64
 		UnitNotional   float64
+		Capital        float64
 	}
 
 	SpotWorkerStatus struct {

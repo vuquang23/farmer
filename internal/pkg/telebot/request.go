@@ -39,3 +39,20 @@ func (r *StopBotReq) ToStopBotParams() *entities.StopBotParams {
 		Symbol: r.Symbol,
 	}
 }
+
+type AddCapitalReq struct {
+	Symbol  string
+	Capital float64
+}
+
+func (r *AddCapitalReq) Normalize() *AddCapitalReq {
+	r.Symbol = strings.ToUpper(r.Symbol)
+	return r
+}
+
+func (r *AddCapitalReq) ToAddCapitalParams() *entities.AddCapitalParams {
+	return &entities.AddCapitalParams{
+		Symbol:  r.Symbol,
+		Capital: r.Capital,
+	}
+}

@@ -10,6 +10,7 @@ import (
 
 	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/repositories"
+	"farmer/internal/pkg/utils/logger"
 	wt "farmer/internal/pkg/wavetrend"
 )
 
@@ -48,18 +49,18 @@ func NewSpotWorker(
 	}
 }
 
-func (w *spotWorker) SetExchangeInfo(info entities.SpotExchangeInfo) error {
+func (w *spotWorker) SetExchangeInfo(ctx context.Context, info entities.SpotExchangeInfo) error {
 	w.exchangeInf.store(info)
 	return nil
 }
 
-func (w *spotWorker) SetWorkerSettingAndStatus(s entities.SpotWorkerStatus) error {
+func (w *spotWorker) SetWorkerSettingAndStatus(ctx context.Context, s entities.SpotWorkerStatus) error {
 	w.setting.store(s)
 	w.stt.updateTotalUnitBought(int64(s.TotalUnitBought))
 	return nil
 }
 
-func (w *spotWorker) SetStopSignal() {
+func (w *spotWorker) SetStopSignal(ctx context.Context) {
 	atomic.StoreUint32(w.stopSignal, 1)
 
 	// pass signal to wavetrend providers
@@ -89,6 +90,11 @@ func (w *spotWorker) Run(ctx context.Context, startC chan<- error) {
 	startC <- nil
 
 	w.runMainProcessor(ctx)
+}
+
+func (w *spotWorker) AddCapital(ctx context.Context, capital float64) {
+	logger.Info(ctx, "[AddCapital] update capital in memory")
+	w.setting.addCapital(capital)
 }
 
 func wavetrendSvcName(symbol string, timeFrame string) string {

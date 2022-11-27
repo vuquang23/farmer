@@ -12,6 +12,7 @@ type ISpotWorkerRepository interface {
 	GetAllWorkerStatus(ctx context.Context) ([]*entities.SpotWorkerStatus, *errors.InfraError)
 
 	UpdateUnitNotionalByID(ctx context.Context, ID uint64, val float64) *errors.InfraError
+	AddCapital(ctx context.Context, params *entities.AddCapitalParams) *errors.InfraError
 
 	Create(ctx context.Context, w *entities.SpotWorker) (*entities.SpotWorker, *errors.InfraError)
 

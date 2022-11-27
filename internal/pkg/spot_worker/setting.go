@@ -48,3 +48,10 @@ func (s *workerSetting) updateUnitNotional(val float64) {
 
 	s.unitNotional += val
 }
+
+func (s *workerSetting) addCapital(val float64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.unitNotional += val / float64(s.unitBuyAllowed)
+}

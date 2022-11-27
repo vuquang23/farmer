@@ -88,7 +88,7 @@ func (m *spotManager) startWorker(ctx goctx.Context, w *entities.SpotWorkerStatu
 		repositories.SpotTradeRepositoryInstance(),
 		repositories.SpotWorkerRepositoryInstance(),
 	)
-	worker.SetWorkerSettingAndStatus(*w)
+	worker.SetWorkerSettingAndStatus(ctx, *w)
 	m.mapSymbolWorker[w.Symbol] = worker
 
 	startC := make(chan error)
@@ -131,6 +131,7 @@ func (m *spotManager) CreateNewWorker(ctx goctx.Context, params *entities.Create
 		Symbol:         params.Symbol,
 		UnitBuyAllowed: params.UnitBuyAllowed,
 		UnitNotional:   params.UnitNotional,
+		Capital:        params.UnitNotional * float64(params.UnitBuyAllowed),
 	})
 	if infraErr != nil {
 		return infraErr
@@ -151,8 +152,24 @@ func (m *spotManager) CreateNewWorker(ctx goctx.Context, params *entities.Create
 func (m *spotManager) StopBot(ctx goctx.Context, params *entities.StopBotParams) error {
 	w, ok := m.mapSymbolWorker[params.Symbol]
 	if !ok {
-		return errors.New("symbol is invalid")
+		return errors.New("invalid symbol")
 	}
-	w.SetStopSignal()
+	w.SetStopSignal(ctx)
+	return nil
+}
+
+func (m *spotManager) AddCapital(ctx goctx.Context, params *entities.AddCapitalParams) error {
+	w, ok := m.mapSymbolWorker[params.Symbol]
+	if !ok {
+		return errors.New("invalid symbol")
+	}
+
+	infraErr := m.swRepo.AddCapital(ctx, params)
+	if infraErr != nil {
+		return infraErr
+	}
+
+	w.AddCapital(ctx, params.Capital)
+
 	return nil
 }

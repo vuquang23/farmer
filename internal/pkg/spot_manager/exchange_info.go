@@ -82,7 +82,7 @@ func (m *spotManager) updateExchangeInfo(ctx context.Context) error {
 
 		worker, ok := m.mapSymbolWorker[s.Symbol]
 		if ok {
-			worker.SetExchangeInfo(exchangeInfo)
+			worker.SetExchangeInfo(ctx, exchangeInfo)
 		}
 
 	}
