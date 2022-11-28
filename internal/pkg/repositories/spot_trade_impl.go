@@ -115,7 +115,7 @@ func (r *spotTradeRepository) GetAggregatedNotSoldBuyOrders(ctx context.Context,
 	err := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).
 		Group("spot_worker_id").
 		Select(`
-			SUM(qty+0) as total_base_amount, 
+			SUM(qty) as total_base_amount, 
 			SUM(cummulative_quote_qty) as total_cummulative_quote_qty, 
 			SUM(unit_bought) as total_unit_bought
 		`).

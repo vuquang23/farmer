@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `spot_trades` (
     binance_order_id INT NOT NULL,
     spot_worker_id INT NOT NULL,
     qty VARCHAR(64) NOT NULL,
-    cummulative_quote_qty FLOAT NOT NULL,
+    cummulative_quote_qty VARCHAR(64) NOT NULL,
     price FLOAT NOT NULL,
     ref INT,
     is_done BOOLEAN NOT NULL,

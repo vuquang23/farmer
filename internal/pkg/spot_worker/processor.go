@@ -228,7 +228,7 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 	var (
 		sellTrades       []*en.SpotTrade
 		updateUnitBought = 0
-		benefit          = float64(0)
+		benefitQuote     = float64(0)
 		backoff          = retry.NewConstant(50 * time.Millisecond)
 	)
 
@@ -240,21 +240,21 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 			BinanceOrderID:      uint64(r.BinanceResponse.OrderID),
 			SpotWorkerID:        w.ID,
 			Qty:                 r.BinanceResponse.ExecutedQuantity,
-			CummulativeQuoteQty: maths.StrToFloat(r.BinanceResponse.CummulativeQuoteQuantity),
+			CummulativeQuoteQty: r.BinanceResponse.CummulativeQuoteQuantity,
 			Price:               maths.StrToFloat(r.BinanceResponse.Price),
 			Ref:                 r.Order.Ref.ID,
 			IsDone:              true,
 			UnitBought:          r.Order.UnitBought,
 		})
 
-		benefit += maths.StrToFloat(r.BinanceResponse.CummulativeQuoteQuantity) - r.Order.Ref.CummulativeQuoteQty
+		benefitQuote += maths.StrToFloat(r.BinanceResponse.CummulativeQuoteQuantity) - maths.StrToFloat(r.Order.Ref.CummulativeQuoteQty)
 	}
 
 	w.stt.updateTotalUnitBought(-int64(updateUnitBought))
 
 	// update unit notional
 	unitBuyAllowed := w.setting.loadUnitBuyAllowed()
-	val := benefit / float64(unitBuyAllowed)
+	val := benefitQuote / float64(unitBuyAllowed)
 	/// in memory
 	w.setting.updateUnitNotional(val)
 	/// in db
@@ -433,7 +433,7 @@ func (w *spotWorker) afterBuy(ctx context.Context, res *binance.CreateOrderRespo
 			BinanceOrderID:      uint64(res.OrderID),
 			SpotWorkerID:        w.ID,
 			Qty:                 res.ExecutedQuantity,
-			CummulativeQuoteQty: maths.StrToFloat(res.CummulativeQuoteQuantity),
+			CummulativeQuoteQty: res.CummulativeQuoteQuantity,
 			Price:               maths.StrToFloat(res.Price),
 			IsDone:              false,
 			UnitBought:          uint64(unitBought),
