@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS `spot_workers` (
     id INT PRIMARY KEY AUTO_INCREMENT,
     symbol VARCHAR(16) NOT NULL,
     unit_buy_allowed INT NOT NULL,
-    unit_notional FLOAT NOT NULL
+    unit_notional FLOAT NOT NULL,
+    capital FLOAT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS `spot_trades` (
@@ -12,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `spot_trades` (
     binance_order_id INT NOT NULL,
     spot_worker_id INT NOT NULL,
     qty VARCHAR(64) NOT NULL,
-    cummulative_quote_qty FLOAT NOT NULL,
+    cummulative_quote_qty VARCHAR(64) NOT NULL,
     price FLOAT NOT NULL,
     ref INT,
     is_done BOOLEAN NOT NULL,

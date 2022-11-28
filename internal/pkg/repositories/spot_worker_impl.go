@@ -82,3 +82,17 @@ func (r *spotWorkerRepository) DeleteByID(ctx context.Context, ID uint64) *error
 	}
 	return nil
 }
+
+func (r *spotWorkerRepository) AddCapital(ctx context.Context, params *entities.AddCapitalParams) *errors.InfraError {
+	logger.Info(ctx, "[AddCapital] update capital in DB")
+
+	err := r.db.Table("spot_workers").
+		Where("symbol = ?", params.Symbol).
+		Update("capital", gorm.Expr("capital + ?", params.Capital)).
+		Update("unit_notional", gorm.Expr("unit_notional + ?/unit_buy_allowed", params.Capital)).Error
+	if err != nil {
+		logger.Error(ctx, err)
+		return errors.NewInfraErrorDBUpdate(err)
+	}
+	return nil
+}

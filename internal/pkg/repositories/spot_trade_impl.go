@@ -109,18 +109,20 @@ func (r *spotTradeRepository) GetTotalQuoteBenefit(workerID uint64) (float64, *p
 	return ret.TotalQuoteBenefit, nil
 }
 
-func (r *spotTradeRepository) GetBaseAmountAndTotalUnitBought(workerID uint64) (float64, uint64, *pkgErr.InfraError) {
-	type response struct {
-		BaseAmount      float64
-		TotalUnitBought uint64
-	}
-	var ret response
+func (r *spotTradeRepository) GetAggregatedNotSoldBuyOrders(ctx context.Context, workerID uint64) (*entities.AggregatedBuyOrders, *pkgErr.InfraError) {
+	var ret *entities.AggregatedBuyOrders
 
 	err := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).
-		Group("spot_worker_id").Select("SUM(qty+0) as base_amount, SUM(unit_bought) as total_unit_bought").Find(&ret).Error
+		Group("spot_worker_id").
+		Select(`
+			SUM(qty) as total_base_amount, 
+			SUM(cummulative_quote_qty) as total_cummulative_quote_qty, 
+			SUM(unit_bought) as total_unit_bought
+		`).
+		Find(&ret).Error
 	if err != nil {
-		return 0, 0, pkgErr.NewInfraErrorDBSelect(err)
+		return nil, pkgErr.NewInfraErrorDBSelect(err)
 	}
 
-	return ret.BaseAmount, ret.TotalUnitBought, nil
+	return ret, nil
 }

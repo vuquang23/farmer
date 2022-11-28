@@ -38,8 +38,9 @@ func main() {
 }
 
 func spotFarmerCommand() *cli.Command {
-	cfgFile := "internal/pkg/config/file/default.yaml"
 	testFlag := "test"
+	cfgFlag := "config"
+	cfgDefault := "internal/pkg/config/file/default.yaml"
 
 	return &cli.Command{
 		Name:  "sfarmer",
@@ -49,12 +50,16 @@ func spotFarmerCommand() *cli.Command {
 				Name:  testFlag,
 				Value: true,
 			},
+			&cli.StringFlag{
+				Name:  cfgFlag,
+				Value: cfgDefault,
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			isTest := ctx.Bool(testFlag)
 			fmt.Printf("Run spot farmer with test mode: %t", isTest)
 
-			if err := config.Load(cfgFile); err != nil {
+			if err := config.Load(ctx.String(cfgFlag)); err != nil {
 				return errors.New("can not load config")
 			}
 

@@ -109,11 +109,12 @@ func (t *teleBot) SendMsgWithFormat(ctx context.Context, template string, params
 }
 
 func (t *teleBot) setupRoute() {
-	t.m["get!/spot/account-info"] = t.getSpotAccountInfo
-	t.m["get!/health"] = t.healthCheck
+	t.m[GetSpotAccountInfoCmd] = t.getSpotAccountInfo
+	t.m[GetSpotHealthCmd] = t.healthCheck
 
-	t.m["post!/spot"] = t.createNewSpotWorker
-	t.m["post!/spot/stop"] = t.stopSpotBot
+	t.m[CreateSpotWorkerCmd] = t.createNewSpotWorker
+	t.m[AddCapitalSpotWorkerCmd] = t.addCapitalSpotWorker
+	t.m[StopSpotWorkerCmd] = t.stopSpotBot
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		args := strings.Fields(c.Text())
@@ -130,8 +131,7 @@ func (t *teleBot) setupRoute() {
 }
 
 func (t *teleBot) getSpotAccountInfo(c tb.Context) {
-	f := func() string {
-		ctx := goctx.Background()
+	f := func(ctx goctx.Context) string {
 		ret, err := t.spotTradeSvc.GetTradingPairsInfo(ctx)
 		if err != nil {
 			logger.Error(ctx, err)
@@ -142,33 +142,41 @@ func (t *teleBot) getSpotAccountInfo(c tb.Context) {
 		return message(dtoRes)
 	}
 
-	msg := f()
+	msg := f(goctx.Background())
 	c.Send(msg)
 }
 
 func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
-	p := []*SpotPairInfo{}
-	totalUsdBenefit := 0.0
-	N := 10000.
+	var (
+		p               = []*SpotPairInfo{}
+		totalChangedUSD = 0.0
+		totalBenefitUSD = 0.0
+		N               = 10000.
+	)
 
 	for _, e := range en {
-		p = append(p, &SpotPairInfo{
+		info := SpotPairInfo{
 			Symbol:          e.Symbol,
-			UsdBenefit:      math.Round(e.UsdBenefit*N) / N,
+			Capital:         e.Capital,
+			CurrentUSDValue: math.Round(e.CurrentUSDValue*N) / N,
+			BenefitUSD:      math.Round(e.BenefitUSD*N) / N,
+			ChangedUSD:      math.Round((e.CurrentUSDValue-e.Capital)*N) / N,
 			BaseAmount:      math.Round(e.BaseAmount*N) / N,
 			QuoteAmount:     math.Round(e.QuoteAmount*N) / N,
-			CurrentUsdValue: math.Round(e.CurrentUsdValue*N) / N,
 			UnitBuyAllowed:  e.UnitBuyAllowed,
-			UnitNotional:    e.UnitNotional,
+			UnitNotional:    math.Round(e.UnitNotional*N) / N,
 			TotalUnitBought: e.TotalUnitBought,
-		})
+		}
+		p = append(p, &info)
 
-		totalUsdBenefit += e.UsdBenefit
+		totalBenefitUSD += info.BenefitUSD
+		totalChangedUSD += info.ChangedUSD
 	}
 
 	return &GetSpotAccountInfoResponse{
 		Pairs:           p,
-		TotalUsdBenefit: math.Round(totalUsdBenefit*N) / N,
+		TotalBenefitUSD: math.Round(totalBenefitUSD*N) / N,
+		TotalChangedUSD: math.Round(totalChangedUSD*N) / N,
 	}
 }
 
@@ -178,8 +186,7 @@ func (t *teleBot) healthCheck(c tb.Context) {
 }
 
 func (t *teleBot) createNewSpotWorker(c tb.Context) {
-	f := func() string {
-		ctx := goctx.Background()
+	f := func(ctx goctx.Context) string {
 		args := strings.Fields(c.Text())
 		if len(args) == 1 {
 			return "missing required body"
@@ -202,13 +209,12 @@ func (t *teleBot) createNewSpotWorker(c tb.Context) {
 		return message("ok")
 	}
 
-	msg := f()
+	msg := f(goctx.Background())
 	c.Send(msg)
 }
 
 func (t *teleBot) stopSpotBot(c tb.Context) {
-	f := func() string {
-		ctx := goctx.Background()
+	f := func(ctx goctx.Context) string {
 		args := strings.Fields(c.Text())
 		if len(args) == 1 {
 			return "missing required body"
@@ -231,7 +237,35 @@ func (t *teleBot) stopSpotBot(c tb.Context) {
 		return message("ok")
 	}
 
-	msg := f()
+	msg := f(goctx.Background())
+	c.Send(msg)
+}
+
+func (t *teleBot) addCapitalSpotWorker(c tb.Context) {
+	f := func(ctx goctx.Context) string {
+		args := strings.Fields(c.Text())
+		if len(args) == 1 {
+			return "missing required body"
+		}
+
+		var req AddCapitalReq
+		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
+			logger.Error(ctx, err)
+			return message(err)
+		}
+
+		params := req.Normalize().ToAddCapitalParams()
+		if err := spotmanager.SpotManagerInstance().AddCapital(
+			context.Child(ctx, fmt.Sprintf("[add-capital-spot-worker] %s", params.Symbol)),
+			params,
+		); err != nil {
+			return message(err)
+		}
+
+		return message("ok")
+	}
+
+	msg := f(goctx.Background())
 	c.Send(msg)
 }
 

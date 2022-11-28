@@ -9,3 +9,8 @@ type CreateNewSpotWorkerParams struct {
 type StopBotParams struct {
 	Symbol string
 }
+
+type AddCapitalParams struct {
+	Symbol  string
+	Capital float64
+}
