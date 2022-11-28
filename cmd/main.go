@@ -40,7 +40,7 @@ func main() {
 func spotFarmerCommand() *cli.Command {
 	testFlag := "test"
 	cfgFlag := "config"
-	defaultCfgFile := "internal/pkg/config/file/default.yaml"
+	cfgDefault := "internal/pkg/config/file/default.yaml"
 
 	return &cli.Command{
 		Name:  "sfarmer",
@@ -52,7 +52,7 @@ func spotFarmerCommand() *cli.Command {
 			},
 			&cli.StringFlag{
 				Name:  cfgFlag,
-				Value: defaultCfgFile,
+				Value: cfgDefault,
 			},
 		},
 		Action: func(ctx *cli.Context) error {
