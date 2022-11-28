@@ -109,12 +109,12 @@ func (t *teleBot) SendMsgWithFormat(ctx context.Context, template string, params
 }
 
 func (t *teleBot) setupRoute() {
-	t.m["get!/spot/account-info"] = t.getSpotAccountInfo
-	t.m["get!/health"] = t.healthCheck
+	t.m[GetSpotAccountInfoCmd] = t.getSpotAccountInfo
+	t.m[GetSpotHealthCmd] = t.healthCheck
 
-	t.m["post!/spot"] = t.createNewSpotWorker
-	t.m["post!/spot/add-capital"] = t.addCapitalSpotWorker
-	t.m["post!/spot/stop"] = t.stopSpotBot
+	t.m[CreateSpotWorkerCmd] = t.createNewSpotWorker
+	t.m[AddCapitalSpotWorkerCmd] = t.addCapitalSpotWorker
+	t.m[StopSpotWorkerCmd] = t.stopSpotBot
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		args := strings.Fields(c.Text())
@@ -131,8 +131,7 @@ func (t *teleBot) setupRoute() {
 }
 
 func (t *teleBot) getSpotAccountInfo(c tb.Context) {
-	f := func() string {
-		ctx := goctx.Background()
+	f := func(ctx goctx.Context) string {
 		ret, err := t.spotTradeSvc.GetTradingPairsInfo(ctx)
 		if err != nil {
 			logger.Error(ctx, err)
@@ -143,7 +142,7 @@ func (t *teleBot) getSpotAccountInfo(c tb.Context) {
 		return message(dtoRes)
 	}
 
-	msg := f()
+	msg := f(goctx.Background())
 	c.Send(msg)
 }
 
