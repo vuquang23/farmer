@@ -32,10 +32,12 @@ type handlerFunc func(c tb.Context)
 
 // TeleBot ...
 type teleBot struct {
-	bot          *tb.Bot
-	group        *tb.Chat
-	spotTradeSvc services.ISpotTradeService
-	m            map[string]handlerFunc
+	bot               *tb.Bot
+	group             *tb.Chat
+	spotTradeSvc      services.ISpotTradeService
+	wavetrendProvider wavetrendprovider.IWavetrendProvider
+	spotManager       spotmanager.ISpotManager
+	m                 map[string]handlerFunc
 }
 
 var tlbot *teleBot
@@ -44,7 +46,7 @@ func TeleBotInstance() ITeleBot {
 	return tlbot
 }
 
-func InitTeleBot(spotTradeSvc services.ISpotTradeService) error {
+func InitTeleBot(spotTradeSvc services.ISpotTradeService, wavetrendProvider wavetrendprovider.IWavetrendProvider, spotManager spotmanager.ISpotManager) error {
 	if tlbot != nil {
 		return nil
 	}
@@ -65,8 +67,10 @@ func InitTeleBot(spotTradeSvc services.ISpotTradeService) error {
 			ID:   groupID,
 			Type: tb.ChatGroup,
 		},
-		spotTradeSvc: spotTradeSvc,
-		m:            make(map[string]handlerFunc),
+		spotTradeSvc:      spotTradeSvc,
+		wavetrendProvider: wavetrendProvider,
+		spotManager:       spotManager,
+		m:                 make(map[string]handlerFunc),
 	}
 	tlbot.setupRoute()
 
@@ -143,16 +147,26 @@ func (t *teleBot) getWavetrendData(c tb.Context) {
 			return "missing svcName"
 		}
 		svcName := strings.ToUpper(args[1]) + ":" + strings.ToLower(args[2])
-		data, isOutdated := wavetrendprovider.
-			WavetrendProviderInstance().
-			GetPastWaveTrendData(
-				context.Child(ctx, fmt.Sprintf("[get-wavetrend-data] %s", svcName)),
-				svcName,
-			)
-		ret := GetWavetrendDataResponse{
-			Data:       data,
-			IsOutdated: isOutdated,
-		}
+
+		var ret GetWavetrendDataResponse
+
+		data, isOutdated := t.wavetrendProvider.GetPastWaveTrendData(
+			context.Child(ctx, fmt.Sprintf("[get-wavetrend-data] %s", svcName)),
+			svcName,
+		)
+		ret.IsOutdated = isOutdated
+		ret.PastTci = data.PastTci
+		ret.DifWavetrend = data.DifWavetrend
+
+		currentTci, _ := t.wavetrendProvider.GetCurrentTci(ctx, svcName)
+		ret.CurrentTci = currentTci
+
+		currentDifWavetrend, _ := t.wavetrendProvider.GetCurrentDifWavetrend(ctx, svcName)
+		ret.CurrentDifWavetrend = currentDifWavetrend
+
+		closePrice, _ := t.wavetrendProvider.GetClosePrice(ctx, svcName)
+		ret.ClosePrice = closePrice
+
 		return message(ret)
 	}
 
@@ -211,7 +225,7 @@ func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAc
 }
 
 func (t *teleBot) healthCheck(c tb.Context) {
-	mapping := spotmanager.SpotManagerInstance().CheckHealth()
+	mapping := t.spotManager.CheckHealth()
 	c.Send(message(mapping))
 }
 
@@ -229,7 +243,7 @@ func (t *teleBot) createNewSpotWorker(c tb.Context) {
 		}
 
 		params := req.Normalize().ToCreateNewSpotWorkerParams()
-		if err := spotmanager.SpotManagerInstance().CreateNewWorker(
+		if err := t.spotManager.CreateNewWorker(
 			context.Child(ctx, fmt.Sprintf("[create-new-worker] %s", params.Symbol)),
 			params,
 		); err != nil {
@@ -257,7 +271,7 @@ func (t *teleBot) stopSpotBot(c tb.Context) {
 		}
 
 		params := req.Normalize().ToStopBotParams()
-		if err := spotmanager.SpotManagerInstance().StopBot(
+		if err := t.spotManager.StopBot(
 			context.Child(ctx, fmt.Sprintf("[stop-bot] %s", params.Symbol)),
 			params,
 		); err != nil {
@@ -285,7 +299,7 @@ func (t *teleBot) addCapitalSpotWorker(c tb.Context) {
 		}
 
 		params := req.Normalize().ToAddCapitalParams()
-		if err := spotmanager.SpotManagerInstance().AddCapital(
+		if err := t.spotManager.AddCapital(
 			context.Child(ctx, fmt.Sprintf("[add-capital-spot-worker] %s", params.Symbol)),
 			params,
 		); err != nil {

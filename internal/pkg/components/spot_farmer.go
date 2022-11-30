@@ -37,7 +37,11 @@ func InitSpotFarmerComponents(isTest bool) error {
 	)
 
 	// telebot
-	if err := telebot.InitTeleBot(services.SpotTradeServiceInstance()); err != nil {
+	if err := telebot.InitTeleBot(
+		services.SpotTradeServiceInstance(),
+		wtp.WavetrendProviderInstance(),
+		spotmanager.SpotManagerInstance(),
+	); err != nil {
 		return err
 	}
 
