@@ -51,7 +51,7 @@ func NewWavetrendWorker(svcName string, bclient *binance.Client, klineMsgChan <-
 	}
 }
 
-func (w *worker) Stop() {
+func (w *worker) Stop(ctx context.Context) {
 	w.cancelSubscribe()
 	atomic.StoreUint32(w.stopSignal, 1)
 }
@@ -60,7 +60,7 @@ func (w *worker) getStopSignal() bool {
 	return atomic.LoadUint32(w.stopSignal) > 0
 }
 
-func (w *worker) GetCurrentTci() (float64, bool) {
+func (w *worker) GetCurrentTci(ctx context.Context) (float64, bool) {
 	currentTci, updatedAt := w.loadCurrentTciAndLastUpdatedAt()
 
 	outDatedTime := w.setting.timeFrameUnixMili
@@ -71,7 +71,7 @@ func (w *worker) GetCurrentTci() (float64, bool) {
 	return currentTci, false
 }
 
-func (w *worker) GetCurrentDifWavetrend() (float64, bool) {
+func (w *worker) GetCurrentDifWavetrend(ctx context.Context) (float64, bool) {
 	difWavetrend, updatedAt := w.loadCurrentDifWavetrendAndLastUpdatedAt()
 
 	outDatedTime := w.setting.timeFrameUnixMili
@@ -82,7 +82,7 @@ func (w *worker) GetCurrentDifWavetrend() (float64, bool) {
 	return difWavetrend, false
 }
 
-func (w *worker) GetClosePrice() (float64, bool) {
+func (w *worker) GetClosePrice(ctx context.Context) (float64, bool) {
 	closePrice, updatedAt := w.loadClosePriceAndLastUpdatedAt()
 	outDatedTime := w.setting.timeFrameUnixMili
 	if time.Now().UnixMilli()-updatedAt.UnixMilli() > int64(outDatedTime) {
@@ -91,7 +91,7 @@ func (w *worker) GetClosePrice() (float64, bool) {
 	return closePrice, false
 }
 
-func (w *worker) GetPastWaveTrendData() (*entities.PastWavetrend, bool) {
+func (w *worker) GetPastWaveTrendData(ctx context.Context) (*entities.PastWavetrend, bool) {
 	ret := w.loadPastWaveTrendData()
 
 	outDatedTime := w.setting.timeFrameUnixMili * 2

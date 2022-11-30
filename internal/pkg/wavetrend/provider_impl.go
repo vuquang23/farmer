@@ -161,11 +161,11 @@ func (p *wavetrendProvider) startKlineWSConnection(ctx goctx.Context, svcName st
 	}
 }
 
-func (p *wavetrendProvider) SetStopSignal(svcName string) {
+func (p *wavetrendProvider) SetStopSignal(ctx goctx.Context, svcName string) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
 		// stop worker
-		w.Stop()
+		w.Stop(ctx)
 
 		// unscribe to ws
 		stopConnC := p.mapSymbolStopWsChan[svcName]
@@ -173,34 +173,34 @@ func (p *wavetrendProvider) SetStopSignal(svcName string) {
 	}
 }
 
-func (p *wavetrendProvider) GetCurrentTci(svcName string) (float64, bool) {
+func (p *wavetrendProvider) GetCurrentTci(ctx goctx.Context, svcName string) (float64, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
-		return w.GetCurrentTci()
+		return w.GetCurrentTci(ctx)
 	}
 	return 0, true
 }
 
-func (p *wavetrendProvider) GetCurrentDifWavetrend(svcName string) (float64, bool) {
+func (p *wavetrendProvider) GetCurrentDifWavetrend(ctx goctx.Context, svcName string) (float64, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
-		return w.GetCurrentDifWavetrend()
+		return w.GetCurrentDifWavetrend(ctx)
 	}
 	return 0, true
 }
 
-func (p *wavetrendProvider) GetClosePrice(svcName string) (float64, bool) {
+func (p *wavetrendProvider) GetClosePrice(ctx goctx.Context, svcName string) (float64, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
-		return w.GetClosePrice()
+		return w.GetClosePrice(ctx)
 	}
 	return 0, true
 }
 
-func (p *wavetrendProvider) GetPastWaveTrendData(svcName string) (*entities.PastWavetrend, bool) {
+func (p *wavetrendProvider) GetPastWaveTrendData(ctx goctx.Context, svcName string) (*entities.PastWavetrend, bool) {
 	w, ok := p.mapSymbolWorker[svcName]
 	if ok {
-		return w.GetPastWaveTrendData()
+		return w.GetPastWaveTrendData(ctx)
 	}
 	return nil, true
 }

@@ -36,11 +36,6 @@ func InitSpotFarmerComponents(isTest bool) error {
 		repositories.SpotWorkerRepositoryInstance(),
 	)
 
-	// telebot
-	if err := telebot.InitTeleBot(services.SpotTradeServiceInstance()); err != nil {
-		return err
-	}
-
 	// wavetrend provider
 	wtp.InitWavetrendProvider()
 
@@ -49,6 +44,15 @@ func InitSpotFarmerComponents(isTest bool) error {
 		binance.BinanceSpotClientInstance(),
 		repositories.SpotWorkerRepositoryInstance(),
 	)
+
+	// telebot
+	if err := telebot.InitTeleBot(
+		services.SpotTradeServiceInstance(),
+		wtp.WavetrendProviderInstance(),
+		spotmanager.SpotManagerInstance(),
+	); err != nil {
+		return err
+	}
 
 	return nil
 }

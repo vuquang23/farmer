@@ -20,4 +20,13 @@ type (
 		TotalBenefitUSD float64
 		TotalChangedUSD float64
 	}
+
+	GetWavetrendDataResponse struct {
+		PastTci             []float64
+		CurrentTci          float64
+		DifWavetrend        []float64
+		CurrentDifWavetrend float64
+		ClosePrice          float64
+		IsOutdated          bool
+	}
 )
