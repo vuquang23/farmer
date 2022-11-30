@@ -1,5 +1,7 @@
 package telebot
 
+import "farmer/internal/pkg/entities"
+
 // Get account Info
 type (
 	SpotPairInfo struct {
@@ -19,5 +21,10 @@ type (
 		Pairs           []*SpotPairInfo
 		TotalBenefitUSD float64
 		TotalChangedUSD float64
+	}
+
+	GetWavetrendDataResponse struct {
+		Data       *entities.PastWavetrend
+		IsOutdated bool
 	}
 )

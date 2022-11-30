@@ -7,4 +7,6 @@ const (
 	CreateSpotWorkerCmd     = "post!/spot"
 	AddCapitalSpotWorkerCmd = "post!/spot/add-capital"
 	StopSpotWorkerCmd       = "post!/spot/stop"
+
+	GetWavetrendDataCmd = "get!/wavetrend-data"
 )

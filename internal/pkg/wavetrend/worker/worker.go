@@ -7,11 +7,11 @@ import (
 )
 
 type IWavetrendWorker interface {
-	GetCurrentTci() (float64, bool)
-	GetCurrentDifWavetrend() (float64, bool)
-	GetClosePrice() (float64, bool)
-	GetPastWaveTrendData() (*entities.PastWavetrend, bool)
+	GetCurrentTci(ctx context.Context) (float64, bool)
+	GetCurrentDifWavetrend(ctx context.Context) (float64, bool)
+	GetClosePrice(ctx context.Context) (float64, bool)
+	GetPastWaveTrendData(ctx context.Context) (*entities.PastWavetrend, bool)
 
 	Run(ctx context.Context, done chan<- error)
-	Stop()
+	Stop(ctx context.Context)
 }

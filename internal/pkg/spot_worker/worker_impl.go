@@ -65,7 +65,7 @@ func (w *spotWorker) SetStopSignal(ctx context.Context) {
 
 	// pass signal to wavetrend providers
 	for _, timeFrame := range w.wavetrendTimeFrames {
-		w.wavetrendProvider.SetStopSignal(wavetrendSvcName(w.setting.symbol, timeFrame))
+		w.wavetrendProvider.SetStopSignal(ctx, wavetrendSvcName(w.setting.symbol, timeFrame))
 	}
 }
 

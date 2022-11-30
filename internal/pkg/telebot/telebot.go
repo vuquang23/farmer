@@ -19,6 +19,7 @@ import (
 	spotmanager "farmer/internal/pkg/spot_manager"
 	"farmer/internal/pkg/utils/context"
 	"farmer/internal/pkg/utils/logger"
+	wavetrendprovider "farmer/internal/pkg/wavetrend"
 )
 
 type ITeleBot interface {
@@ -109,12 +110,17 @@ func (t *teleBot) SendMsgWithFormat(ctx context.Context, template string, params
 }
 
 func (t *teleBot) setupRoute() {
+	// read spot
 	t.m[GetSpotAccountInfoCmd] = t.getSpotAccountInfo
 	t.m[GetSpotHealthCmd] = t.healthCheck
 
+	// write spot
 	t.m[CreateSpotWorkerCmd] = t.createNewSpotWorker
 	t.m[AddCapitalSpotWorkerCmd] = t.addCapitalSpotWorker
 	t.m[StopSpotWorkerCmd] = t.stopSpotBot
+
+	// read common
+	t.m[GetWavetrendDataCmd] = t.getWavetrendData
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		args := strings.Fields(c.Text())
@@ -128,6 +134,30 @@ func (t *teleBot) setupRoute() {
 		handler(c)
 		return nil
 	})
+}
+
+func (t *teleBot) getWavetrendData(c tb.Context) {
+	f := func(ctx goctx.Context) string {
+		args := strings.Fields(c.Text())
+		if len(args) < 3 {
+			return "missing svcName"
+		}
+		svcName := strings.ToUpper(args[1]) + ":" + strings.ToLower(args[2])
+		data, isOutdated := wavetrendprovider.
+			WavetrendProviderInstance().
+			GetPastWaveTrendData(
+				context.Child(ctx, fmt.Sprintf("[get-wavetrend-data] %s", svcName)),
+				svcName,
+			)
+		ret := GetWavetrendDataResponse{
+			Data:       data,
+			IsOutdated: isOutdated,
+		}
+		return message(ret)
+	}
+
+	msg := f(goctx.Background())
+	c.Send(msg)
 }
 
 func (t *teleBot) getSpotAccountInfo(c tb.Context) {

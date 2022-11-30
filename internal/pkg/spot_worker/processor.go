@@ -60,14 +60,14 @@ func (w *spotWorker) analyzeExceptionsAndSell(ctx context.Context) {
 }
 
 func (w *spotWorker) sellSignalExceptions(ctx context.Context) (*en.SpotSellSignal, error) {
-	h1DifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(wavetrendSvcName(w.setting.symbol, c.H1))
+	h1DifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(ctx, wavetrendSvcName(w.setting.symbol, c.H1))
 	if isOutdated {
 		err := errors.New("h1DifWt is outdated")
 		logger.Warnf(ctx, "[sellSignalExceptions] %s", err)
 		return nil, err
 	}
 
-	currentPrice, isOutdated := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
+	currentPrice, isOutdated := w.wavetrendProvider.GetClosePrice(ctx, wavetrendSvcName(w.setting.symbol, c.M1))
 	if isOutdated {
 		err := errors.New("currentPrice is outdated")
 		logger.Warnf(ctx, "[sellSignalExceptions] %s", err)
@@ -170,7 +170,7 @@ func (w *spotWorker) createSellOrders(ctx context.Context, sSignal *en.SpotSellS
 	// sell time lasts in 60 seconds
 	ticker := time.NewTicker(time.Second)
 	for i := 0; i < 60; i, _ = i+1, <-ticker.C {
-		currentPrice, isOutdated := w.wavetrendProvider.GetClosePrice(m1SvcName)
+		currentPrice, isOutdated := w.wavetrendProvider.GetClosePrice(ctx, m1SvcName)
 		if isOutdated {
 			logger.Warn(ctx, "[createSellOrders] closePrice is outdated")
 			continue
@@ -189,8 +189,8 @@ func (w *spotWorker) createSellOrders(ctx context.Context, sSignal *en.SpotSellS
 			}
 
 			// ignore outdated status here.
-			currentTci, _ := w.wavetrendProvider.GetCurrentTci(m1SvcName)
-			currentDifWavetrend, _ := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
+			currentTci, _ := w.wavetrendProvider.GetCurrentTci(ctx, m1SvcName)
+			currentDifWavetrend, _ := w.wavetrendProvider.GetCurrentDifWavetrend(ctx, m1SvcName)
 			logger.Infof(
 				ctx, "[createSellOrders] try to sell with qty: %s | price: %f | M1 currentTci: %f | M1 currentDifWavetrend: %f",
 				order.Qty, price, currentTci, currentDifWavetrend,
@@ -270,7 +270,7 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 		err := w.spotWorkerRepo.UpdateUnitNotionalByID(ctx, w.ID, val)
 		if err != nil {
 			logger.Error(ctx, err)
-			return err
+			return retry.RetryableError(err)
 		}
 
 		return nil
@@ -289,7 +289,7 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 		err := w.spotTradeRepo.CreateSellOrders(ctx, sellTrades)
 		if err != nil {
 			logger.Info(ctx, err)
-			return err
+			return retry.RetryableError(err)
 		}
 
 		return nil
@@ -313,7 +313,7 @@ func (w *spotWorker) sellSignal(ctx context.Context) (*en.SpotSellSignal, error)
 
 	// ignore isOutdated here because wavetrend and difWavetrend in func
 	// shouldSell is updated nearly the same time with closePrice
-	currentPrice, _ := w.wavetrendProvider.GetClosePrice(m1SvcName)
+	currentPrice, _ := w.wavetrendProvider.GetClosePrice(ctx, m1SvcName)
 
 	trades, err := w.spotTradeRepo.GetNotDoneBuyOrdersByWorkerID(ctx, w.ID)
 	if err != nil {
@@ -347,7 +347,7 @@ func (w *spotWorker) sellSignal(ctx context.Context) (*en.SpotSellSignal, error)
 func (w *spotWorker) shouldSell(ctx context.Context) bool {
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
-	currentTci, isOutdated := w.wavetrendProvider.GetCurrentTci(m1SvcName)
+	currentTci, isOutdated := w.wavetrendProvider.GetCurrentTci(ctx, m1SvcName)
 	if isOutdated {
 		logger.Warn(ctx, "[shouldSell] currentTci M1 is outdated")
 		return false
@@ -356,7 +356,7 @@ func (w *spotWorker) shouldSell(ctx context.Context) bool {
 		return false
 	}
 
-	currentDifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
+	currentDifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(ctx, m1SvcName)
 	if isOutdated {
 		logger.Warn(ctx, "[shouldSell] currentDifWt M1 is outdated")
 		return false
@@ -365,7 +365,7 @@ func (w *spotWorker) shouldSell(ctx context.Context) bool {
 		return false
 	}
 
-	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(ctx, m1SvcName)
 	if pastWtDat == nil { // should not nil here
 		return false
 	}
@@ -440,7 +440,7 @@ func (w *spotWorker) afterBuy(ctx context.Context, res *binance.CreateOrderRespo
 		})
 		if err != nil {
 			logger.Error(ctx, err)
-			return err
+			return retry.RetryableError(err)
 		}
 
 		return nil
@@ -455,7 +455,7 @@ func (w *spotWorker) createBuyOrder(ctx context.Context, bSignal *en.SpotBuySign
 	for i := 0; i < 20; i, _ = i+1, <-ticker.C {
 		// ignore isOutdated here because wavetrend and difWavetrend
 		// in func shouldBuy is updated in nearly the same time with closePrice
-		currentPrice, _ := w.wavetrendProvider.GetClosePrice(m1SvcName)
+		currentPrice, _ := w.wavetrendProvider.GetClosePrice(ctx, m1SvcName)
 		up := 0.05
 		price := currentPrice * (1 + up/100)
 
@@ -472,26 +472,27 @@ func (w *spotWorker) createBuyOrder(ctx context.Context, bSignal *en.SpotBuySign
 		}
 
 		// ignore isOutdated here
-		currentTci, _ := w.wavetrendProvider.GetCurrentTci(m1SvcName)
-		currentDifWavetrend, _ := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
+		currentTci, _ := w.wavetrendProvider.GetCurrentTci(ctx, m1SvcName)
+		currentDifWavetrend, _ := w.wavetrendProvider.GetCurrentDifWavetrend(ctx, m1SvcName)
 
 		logger.Infof(
 			ctx, "[createBuyOrder] try to buy with notional: %f | price: %f | M1 current tci: %f | M1 current difwavetrend: %f",
 			notional, price, currentTci, currentDifWavetrend,
 		)
 
-		if res, err := b.CreateSpotBuyOrder(
+		res, err := b.CreateSpotBuyOrder(
 			ctx, w.bclient, w.setting.symbol,
 			maths.RoundingUp(qty, w.exchangeInf.loadQtyPrecision()),
 			maths.RoundingUp(price, w.exchangeInf.loadPricePrecision()),
-		); err == nil {
-			logger.Infof(
-				ctx, "[createBuyOrder] buy successfully. notional: %f | price: %f | M1 current tci: %f | M1 current difwavetrend: %f",
-				notional, price, currentTci, currentDifWavetrend,
-			)
-
-			return res, nil
+		)
+		if err != nil {
+			continue
 		}
+		logger.Infof(
+			ctx, "[createBuyOrder] buy successfully. notional: %f | price: %f | M1 current tci: %f | M1 current difwavetrend: %f",
+			notional, price, currentTci, currentDifWavetrend,
+		)
+		return res, nil
 	}
 
 	return nil, e.NewDomainErrorCreateBuyOrderFailed(nil)
@@ -513,7 +514,7 @@ func (w *spotWorker) buySignal(ctx context.Context) (*en.SpotBuySignal, error) {
 
 	// ignore isOutdated here because wavetrend and difWavetrend
 	// in func shouldBuy is updated in nearly the same time with closePrice
-	currentPrice, _ := w.wavetrendProvider.GetClosePrice(wavetrendSvcName(w.setting.symbol, c.M1))
+	currentPrice, _ := w.wavetrendProvider.GetClosePrice(ctx, wavetrendSvcName(w.setting.symbol, c.M1))
 	return &en.SpotBuySignal{
 		ShouldBuy: true,
 		Order: en.SpotBuyOrder{
@@ -531,7 +532,7 @@ func (w *spotWorker) determineUnitNumberToBuy(ctx context.Context) (int64, error
 		h1SvcName = wavetrendSvcName(w.setting.symbol, c.H1)
 	)
 
-	pastWt, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(h1SvcName)
+	pastWt, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(ctx, h1SvcName)
 	if isOutdated {
 		err := errors.New("h1DifWt is outdated")
 		logger.Warnf(ctx, "[determineUnitNumberToBuy] %s", err)
@@ -570,7 +571,7 @@ func (w *spotWorker) shouldBuy(ctx context.Context) bool {
 	// check wavetrend
 	m1SvcName := wavetrendSvcName(w.setting.symbol, c.M1)
 
-	currentTci, isOutdated := w.wavetrendProvider.GetCurrentTci(m1SvcName)
+	currentTci, isOutdated := w.wavetrendProvider.GetCurrentTci(ctx, m1SvcName)
 	if isOutdated {
 		logger.Warn(ctx, "[shouldBuy] M1 currentTci is outdated")
 		return false
@@ -579,7 +580,7 @@ func (w *spotWorker) shouldBuy(ctx context.Context) bool {
 		return false
 	}
 
-	currentDifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(m1SvcName)
+	currentDifWt, isOutdated := w.wavetrendProvider.GetCurrentDifWavetrend(ctx, m1SvcName)
 	if isOutdated {
 		logger.Warn(ctx, "[shouldBuy] M1 currentDifWt is outdated")
 		return false
@@ -588,7 +589,7 @@ func (w *spotWorker) shouldBuy(ctx context.Context) bool {
 		return false
 	}
 
-	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(m1SvcName)
+	pastWtDat, isOutdated := w.wavetrendProvider.GetPastWaveTrendData(ctx, m1SvcName)
 	if pastWtDat == nil { // get error. not expected for err here
 		return false
 	}
