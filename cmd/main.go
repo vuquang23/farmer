@@ -159,6 +159,7 @@ func calcWavetrendMomentumCommand() *cli.Command {
 	symlistFlag := "symlist"
 	intervalFlag := "interval"
 	marketFlag := "market"
+	testFlag := "test"
 
 	return &cli.Command{
 		Name:  "wtmomentum",
@@ -176,6 +177,10 @@ func calcWavetrendMomentumCommand() *cli.Command {
 				Name:  marketFlag,
 				Value: string(enum.Future),
 			},
+			&cli.BoolFlag{
+				Name:  testFlag,
+				Value: false,
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			err := config.Load(cfgFile)
@@ -183,7 +188,7 @@ func calcWavetrendMomentumCommand() *cli.Command {
 				return err
 			}
 
-			components.InitWavetrendCalculatorComponents()
+			components.InitWavetrendCalculatorComponents(ctx.Bool(testFlag))
 
 			calculator := builder.NewWaveTrendCalculator(
 				services.WaveTrendMomentumServiceInstance(),

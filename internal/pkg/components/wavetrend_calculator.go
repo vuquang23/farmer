@@ -6,10 +6,10 @@ import (
 	"farmer/internal/pkg/utils/logger"
 )
 
-func InitWavetrendCalculatorComponents() {
+func InitWavetrendCalculatorComponents(isTest bool) {
 	logger.InitLogger()
 
-	binance.InitBinanceSpotClient(false)
+	binance.InitBinanceSpotClient(isTest)
 	binance.InitBinanceFutureClient()
 
 	services.InitWaveTrendMomentumService(
