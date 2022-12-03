@@ -6,6 +6,7 @@ import (
 	"github.com/adshao/go-binance/v2"
 
 	b "farmer/internal/pkg/binance"
+	"farmer/internal/pkg/entities"
 	en "farmer/internal/pkg/entities"
 	"farmer/internal/pkg/repositories"
 	pkgErr "farmer/pkg/errors"
@@ -77,4 +78,12 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 	}
 
 	return ret, nil
+}
+
+func (s *spotTradeService) ArchiveTradingData(ctx context.Context, params *entities.ArchiveSpotTradingDataParams) *pkgErr.DomainError {
+	infraErr := s.spotTradeRepo.ArchiveTradingData(ctx, params.Symbol)
+	if infraErr != nil {
+		return pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
+	}
+	return nil
 }

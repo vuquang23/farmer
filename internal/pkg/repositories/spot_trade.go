@@ -16,4 +16,5 @@ type ISpotTradeRepository interface {
 
 	CreateBuyOrder(ctx context.Context, spotTrade entities.SpotTrade) *pkgErr.InfraError
 	CreateSellOrders(ctx context.Context, spotTrades []*entities.SpotTrade) *pkgErr.InfraError
+	ArchiveTradingData(ctx context.Context, symbol string) *pkgErr.InfraError
 }

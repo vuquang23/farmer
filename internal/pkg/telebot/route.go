@@ -10,9 +10,10 @@ const (
 	GetSpotAccountInfoCmd = "get!/spot/account-info"
 	GetSpotHealthCmd      = "get!/spot/health"
 
-	CreateSpotWorkerCmd     = "post!/spot"
-	AddCapitalSpotWorkerCmd = "post!/spot/add-capital"
-	StopSpotWorkerCmd       = "post!/spot/stop"
+	CreateSpotWorkerCmd       = "post!/spot"
+	AddCapitalSpotWorkerCmd   = "post!/spot/add-capital"
+	StopSpotWorkerCmd         = "post!/spot/stop"
+	ArchiveSpotTradingDataCmd = "post!/spot/archive-data"
 
 	GetWavetrendDataCmd = "get!/wavetrend-data"
 )
@@ -25,6 +26,7 @@ func (t *teleBot) setupRoute() {
 	t.m[CreateSpotWorkerCmd] = t.createNewSpotWorker
 	t.m[AddCapitalSpotWorkerCmd] = t.addCapitalSpotWorker
 	t.m[StopSpotWorkerCmd] = t.stopSpotWorker
+	t.m[ArchiveSpotTradingDataCmd] = t.archiveSpotTradingData
 
 	// wavetrend
 	t.m[GetWavetrendDataCmd] = t.getWavetrendData

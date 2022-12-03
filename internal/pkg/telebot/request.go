@@ -25,17 +25,17 @@ func (r *CreateNewSpotWorkerReq) Normalize() *CreateNewSpotWorkerReq {
 	return r
 }
 
-type StopBotReq struct {
+type StopWorkerReq struct {
 	Symbol string
 }
 
-func (r *StopBotReq) Normalize() *StopBotReq {
+func (r *StopWorkerReq) Normalize() *StopWorkerReq {
 	r.Symbol = strings.ToUpper(r.Symbol)
 	return r
 }
 
-func (r *StopBotReq) ToStopBotParams() *entities.StopBotParams {
-	return &entities.StopBotParams{
+func (r *StopWorkerReq) ToStopBotParams() *entities.StopWorkerParams {
+	return &entities.StopWorkerParams{
 		Symbol: r.Symbol,
 	}
 }
@@ -54,5 +54,20 @@ func (r *AddCapitalReq) ToAddCapitalParams() *entities.AddCapitalParams {
 	return &entities.AddCapitalParams{
 		Symbol:  r.Symbol,
 		Capital: r.Capital,
+	}
+}
+
+type ArchiveSpotTradingDataReq struct {
+	Symbol string
+}
+
+func (r *ArchiveSpotTradingDataReq) Normalize() *ArchiveSpotTradingDataReq {
+	r.Symbol = strings.ToUpper(r.Symbol)
+	return r
+}
+
+func (r *ArchiveSpotTradingDataReq) ToArchiveSpotTradingDataParams() *entities.ArchiveSpotTradingDataParams {
+	return &entities.ArchiveSpotTradingDataParams{
+		Symbol: r.Symbol,
 	}
 }

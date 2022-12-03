@@ -3,6 +3,7 @@ package telebot
 import (
 	goctx "context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -104,7 +105,7 @@ func (t *teleBot) stopSpotWorker(c tb.Context) {
 			return "missing required body"
 		}
 
-		var req StopBotReq
+		var req StopWorkerReq
 		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
 			logger.Error(ctx, err)
 			return message(err)
@@ -143,6 +144,40 @@ func (t *teleBot) addCapitalSpotWorker(c tb.Context) {
 			context.Child(ctx, fmt.Sprintf("[add-capital-spot-worker] %s", params.Symbol)),
 			params,
 		); err != nil {
+			return message(err)
+		}
+
+		return message("ok")
+	}
+
+	msg := f(goctx.Background())
+	c.Send(msg)
+}
+
+func (t *teleBot) archiveSpotTradingData(c tb.Context) {
+	f := func(ctx goctx.Context) string {
+
+		args := strings.Fields(c.Text())
+		if len(args) == 1 {
+			return "missing required body"
+		}
+
+		var req ArchiveSpotTradingDataReq
+		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
+			logger.Error(ctx, err)
+			return message(err)
+		}
+
+		params := req.Normalize().ToArchiveSpotTradingDataParams()
+		ctx = context.Child(ctx, fmt.Sprintf("[archive-spot-trade-data] %s", params.Symbol))
+
+		isActive := t.spotManager.IsActiveWorker(ctx, params.Symbol)
+		if isActive {
+			return message(errors.New("worker is active"))
+		}
+
+		err := t.spotTradeSvc.ArchiveTradingData(ctx, params)
+		if err != nil {
 			return message(err)
 		}
 

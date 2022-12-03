@@ -115,6 +115,12 @@ func message(data interface{}) string {
 	if ok {
 		return dataStr
 	}
+
+	dataErr, ok := data.(error)
+	if ok {
+		return fmt.Sprintf("error: %s", dataErr.Error())
+	}
+
 	dataBytes, _ := json.Marshal(data)
 	return string(pretty.Pretty(dataBytes))
 }

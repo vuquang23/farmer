@@ -126,3 +126,48 @@ func (r *spotTradeRepository) GetAggregatedNotSoldBuyOrders(ctx context.Context,
 
 	return ret, nil
 }
+
+func (r *spotTradeRepository) ArchiveTradingData(ctx context.Context, symbol string) *pkgErr.InfraError {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		var spotTrades []entities.SpotTrade
+		err := tx.Where("symbol = ? AND is_done = ?", symbol, true).Find(&spotTrades).Error
+		if err != nil {
+			logger.Error(ctx, err)
+			return pkgErr.NewInfraErrorDBSelect(err)
+		}
+
+		historySpotTrades := make([]entities.HistorySpotTrade, len(spotTrades))
+		for idx, t := range spotTrades {
+			historySpotTrades[idx] = entities.NewHistorySpotTrade(t)
+		}
+		err = tx.Create(historySpotTrades).Error
+		if err != nil {
+			logger.Error(ctx, err)
+			return pkgErr.NewInfraErrorDBInsert(err)
+		}
+
+		err = tx.Where("symbol = ?", symbol).Delete(&entities.SpotTrade{}).Error
+		if err != nil {
+			logger.Error(ctx, err)
+			return pkgErr.NewInfraErrorDBDelete(err)
+		}
+
+		err = tx.Where("symbol = ?", symbol).Delete(&entities.SpotWorker{}).Error
+		if err != nil {
+			logger.Error(ctx, err)
+			return pkgErr.NewInfraErrorDBDelete(err)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		infraErr, ok := err.(*pkgErr.InfraError)
+		if ok {
+			return infraErr
+		}
+		return pkgErr.NewInfraErrorDBUnknown(err)
+	}
+
+	return nil
+}

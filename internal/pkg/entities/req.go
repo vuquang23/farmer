@@ -6,11 +6,15 @@ type CreateNewSpotWorkerParams struct {
 	UnitNotional   float64
 }
 
-type StopBotParams struct {
+type StopWorkerParams struct {
 	Symbol string
 }
 
 type AddCapitalParams struct {
 	Symbol  string
 	Capital float64
+}
+
+type ArchiveSpotTradingDataParams struct {
+	Symbol string
 }
