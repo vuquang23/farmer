@@ -9,4 +9,6 @@ import (
 
 type ISpotTradeService interface {
 	GetTradingPairsInfo(ctx context.Context) ([]*entities.SpotTradingPairInfo, *pkgErr.DomainError)
+
+	ArchiveTradingData(ctx context.Context, params *entities.ArchiveSpotTradingDataParams) *pkgErr.DomainError
 }

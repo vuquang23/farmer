@@ -4,8 +4,6 @@ import (
 	goctx "context"
 	"encoding/json"
 	"fmt"
-	"math"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,7 +12,6 @@ import (
 	tb "gopkg.in/telebot.v3"
 
 	"farmer/internal/pkg/config"
-	"farmer/internal/pkg/entities"
 	"farmer/internal/pkg/services"
 	spotmanager "farmer/internal/pkg/spot_manager"
 	"farmer/internal/pkg/utils/context"
@@ -113,211 +110,17 @@ func (t *teleBot) SendMsgWithFormat(ctx context.Context, template string, params
 	t.SendMsg(ctx, fmt.Sprintf(template, params...))
 }
 
-func (t *teleBot) setupRoute() {
-	// read spot
-	t.m[GetSpotAccountInfoCmd] = t.getSpotAccountInfo
-	t.m[GetSpotHealthCmd] = t.healthCheck
-
-	// write spot
-	t.m[CreateSpotWorkerCmd] = t.createNewSpotWorker
-	t.m[AddCapitalSpotWorkerCmd] = t.addCapitalSpotWorker
-	t.m[StopSpotWorkerCmd] = t.stopSpotBot
-
-	// read common
-	t.m[GetWavetrendDataCmd] = t.getWavetrendData
-
-	t.bot.Handle(tb.OnText, func(c tb.Context) error {
-		args := strings.Fields(c.Text())
-		cmd := args[0]
-		handler, ok := t.m[cmd]
-		if !ok {
-			msg := "not found"
-			c.Send(msg)
-			return nil
-		}
-		handler(c)
-		return nil
-	})
-}
-
-func (t *teleBot) getWavetrendData(c tb.Context) {
-	f := func(ctx goctx.Context) string {
-		args := strings.Fields(c.Text())
-		if len(args) < 3 {
-			return "missing svcName"
-		}
-		svcName := strings.ToUpper(args[1]) + ":" + strings.ToLower(args[2])
-
-		var ret GetWavetrendDataResponse
-
-		data, isOutdated := t.wavetrendProvider.GetPastWaveTrendData(
-			context.Child(ctx, fmt.Sprintf("[get-wavetrend-data] %s", svcName)),
-			svcName,
-		)
-		ret.IsOutdated = isOutdated
-		ret.PastTci = data.PastTci
-		ret.DifWavetrend = data.DifWavetrend
-
-		currentTci, _ := t.wavetrendProvider.GetCurrentTci(ctx, svcName)
-		ret.CurrentTci = currentTci
-
-		currentDifWavetrend, _ := t.wavetrendProvider.GetCurrentDifWavetrend(ctx, svcName)
-		ret.CurrentDifWavetrend = currentDifWavetrend
-
-		closePrice, _ := t.wavetrendProvider.GetClosePrice(ctx, svcName)
-		ret.ClosePrice = closePrice
-
-		return message(ret)
-	}
-
-	msg := f(goctx.Background())
-	c.Send(msg)
-}
-
-func (t *teleBot) getSpotAccountInfo(c tb.Context) {
-	f := func(ctx goctx.Context) string {
-		ret, err := t.spotTradeSvc.GetTradingPairsInfo(ctx)
-		if err != nil {
-			logger.Error(ctx, err)
-			return message(err)
-		}
-
-		dtoRes := toGetSpotAccountInfoResponse(ret)
-		return message(dtoRes)
-	}
-
-	msg := f(goctx.Background())
-	c.Send(msg)
-}
-
-func toGetSpotAccountInfoResponse(en []*entities.SpotTradingPairInfo) *GetSpotAccountInfoResponse {
-	var (
-		p               = []*SpotPairInfo{}
-		totalChangedUSD = 0.0
-		totalBenefitUSD = 0.0
-		N               = 10000.
-	)
-
-	for _, e := range en {
-		info := SpotPairInfo{
-			Symbol:          e.Symbol,
-			Capital:         e.Capital,
-			CurrentUSDValue: math.Round(e.CurrentUSDValue*N) / N,
-			BenefitUSD:      math.Round(e.BenefitUSD*N) / N,
-			ChangedUSD:      math.Round((e.CurrentUSDValue-e.Capital)*N) / N,
-			BaseAmount:      math.Round(e.BaseAmount*N) / N,
-			QuoteAmount:     math.Round(e.QuoteAmount*N) / N,
-			UnitBuyAllowed:  e.UnitBuyAllowed,
-			UnitNotional:    math.Round(e.UnitNotional*N) / N,
-			TotalUnitBought: e.TotalUnitBought,
-		}
-		p = append(p, &info)
-
-		totalBenefitUSD += info.BenefitUSD
-		totalChangedUSD += info.ChangedUSD
-	}
-
-	return &GetSpotAccountInfoResponse{
-		Pairs:           p,
-		TotalBenefitUSD: math.Round(totalBenefitUSD*N) / N,
-		TotalChangedUSD: math.Round(totalChangedUSD*N) / N,
-	}
-}
-
-func (t *teleBot) healthCheck(c tb.Context) {
-	mapping := t.spotManager.CheckHealth()
-	c.Send(message(mapping))
-}
-
-func (t *teleBot) createNewSpotWorker(c tb.Context) {
-	f := func(ctx goctx.Context) string {
-		args := strings.Fields(c.Text())
-		if len(args) == 1 {
-			return "missing required body"
-		}
-
-		var req CreateNewSpotWorkerReq
-		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
-			logger.Error(ctx, err)
-			return message(err)
-		}
-
-		params := req.Normalize().ToCreateNewSpotWorkerParams()
-		if err := t.spotManager.CreateNewWorker(
-			context.Child(ctx, fmt.Sprintf("[create-new-worker] %s", params.Symbol)),
-			params,
-		); err != nil {
-			return message(err)
-		}
-
-		return message("ok")
-	}
-
-	msg := f(goctx.Background())
-	c.Send(msg)
-}
-
-func (t *teleBot) stopSpotBot(c tb.Context) {
-	f := func(ctx goctx.Context) string {
-		args := strings.Fields(c.Text())
-		if len(args) == 1 {
-			return "missing required body"
-		}
-
-		var req StopBotReq
-		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
-			logger.Error(ctx, err)
-			return message(err)
-		}
-
-		params := req.Normalize().ToStopBotParams()
-		if err := t.spotManager.StopBot(
-			context.Child(ctx, fmt.Sprintf("[stop-bot] %s", params.Symbol)),
-			params,
-		); err != nil {
-			return message(err)
-		}
-
-		return message("ok")
-	}
-
-	msg := f(goctx.Background())
-	c.Send(msg)
-}
-
-func (t *teleBot) addCapitalSpotWorker(c tb.Context) {
-	f := func(ctx goctx.Context) string {
-		args := strings.Fields(c.Text())
-		if len(args) == 1 {
-			return "missing required body"
-		}
-
-		var req AddCapitalReq
-		if err := json.Unmarshal([]byte(args[1]), &req); err != nil {
-			logger.Error(ctx, err)
-			return message(err)
-		}
-
-		params := req.Normalize().ToAddCapitalParams()
-		if err := t.spotManager.AddCapital(
-			context.Child(ctx, fmt.Sprintf("[add-capital-spot-worker] %s", params.Symbol)),
-			params,
-		); err != nil {
-			return message(err)
-		}
-
-		return message("ok")
-	}
-
-	msg := f(goctx.Background())
-	c.Send(msg)
-}
-
 func message(data interface{}) string {
 	dataStr, ok := data.(string)
 	if ok {
 		return dataStr
 	}
+
+	dataErr, ok := data.(error)
+	if ok {
+		return fmt.Sprintf("error: %s", dataErr.Error())
+	}
+
 	dataBytes, _ := json.Marshal(data)
 	return string(pretty.Pretty(dataBytes))
 }

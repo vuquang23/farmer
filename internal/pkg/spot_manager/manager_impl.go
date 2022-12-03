@@ -149,12 +149,13 @@ func (m *spotManager) CreateNewWorker(ctx goctx.Context, params *entities.Create
 	return nil
 }
 
-func (m *spotManager) StopBot(ctx goctx.Context, params *entities.StopBotParams) error {
+func (m *spotManager) StopWorker(ctx goctx.Context, params *entities.StopWorkerParams) error {
 	w, ok := m.mapSymbolWorker[params.Symbol]
 	if !ok {
 		return errors.New("invalid symbol")
 	}
 	w.SetStopSignal(ctx)
+	delete(m.mapSymbolWorker, params.Symbol)
 	return nil
 }
 
@@ -172,4 +173,9 @@ func (m *spotManager) AddCapital(ctx goctx.Context, params *entities.AddCapitalP
 	w.AddCapital(ctx, params.Capital)
 
 	return nil
+}
+
+func (m *spotManager) IsActiveWorker(ctx goctx.Context, symbol string) bool {
+	_, ok := m.mapSymbolWorker[symbol]
+	return ok
 }
