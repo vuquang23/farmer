@@ -5,8 +5,12 @@ import (
 	"farmer/internal/pkg/utils/logger"
 )
 
-func InitSymlistUpdaterComponents() {
+func InitSymlistUpdaterComponents() error {
 	logger.InitLogger()
 
-	binance.InitBinanceSpotClient(false)
+	if err := binance.InitBinanceSpotClient(false); err != nil {
+		return err
+	}
+
+	return nil
 }

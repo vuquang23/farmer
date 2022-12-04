@@ -13,7 +13,7 @@ import (
 
 var spot *binance.Client
 
-func InitBinanceSpotClient(isTest bool) {
+func InitBinanceSpotClient(isTest bool) error {
 	if spot == nil {
 		if isTest {
 			binance.UseTestnet = true
@@ -21,22 +21,28 @@ func InitBinanceSpotClient(isTest bool) {
 		cfg := config.Instance().Binance
 		spot = binance.NewClient(cfg.ApiKey, cfg.SecretKey)
 
-		spotNotifyCurrentUSDTBalance()
+		if err := spotNotifyCurrentUSDTBalance(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func spotNotifyCurrentUSDTBalance() {
-	ctx := context.Child(goctx.Background(), "[spot-notify-current-usdt-balance]")
+func spotNotifyCurrentUSDTBalance() error {
+	ctx := context.Child(goctx.Background(), "[spot] notify current USDT balance]")
+
 	data, err := spot.NewGetAccountService().Do(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	for _, d := range data.Balances {
-		if d.Asset == "USDT" {
-			logger.Infof(ctx, "%+v", d)
+	for _, b := range data.Balances {
+		if b.Asset == "USDT" {
+			logger.Infof(ctx, "%+v", b)
 			break
 		}
 	}
+
+	return nil
 }
 
 func BinanceSpotClientInstance() *binance.Client {

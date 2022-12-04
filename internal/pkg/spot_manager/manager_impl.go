@@ -89,6 +89,12 @@ func (m *spotManager) startWorker(ctx goctx.Context, w *entities.SpotWorkerStatu
 		repositories.SpotWorkerRepositoryInstance(),
 	)
 	worker.SetWorkerSettingAndStatus(ctx, *w)
+	exchangeInfo, ok := m.GetExchangeInfo(w.Symbol)
+	if !ok {
+		err := fmt.Errorf("[startWorker] not found exchange info for symbol: %s", w.Symbol)
+		return err
+	}
+	worker.SetExchangeInfo(ctx, exchangeInfo)
 	m.mapSymbolWorker[w.Symbol] = worker
 
 	startC := make(chan error)

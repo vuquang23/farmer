@@ -18,7 +18,9 @@ func InitSpotFarmerComponents(isTest bool) error {
 	}
 
 	// binance client
-	binance.InitBinanceSpotClient(isTest)
+	if err := binance.InitBinanceSpotClient(isTest); err != nil {
+		return err
+	}
 
 	// db
 	if err := db.InitDB(); err != nil {

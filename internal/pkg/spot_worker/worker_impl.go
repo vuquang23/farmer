@@ -50,13 +50,17 @@ func NewSpotWorker(
 }
 
 func (w *spotWorker) SetExchangeInfo(ctx context.Context, info entities.SpotExchangeInfo) error {
+	logger.Infof(ctx, "[SetExchangeInfo] worker: %s | info: %+v", w.setting.symbol, info)
+
 	w.exchangeInf.store(info)
 	return nil
 }
 
-func (w *spotWorker) SetWorkerSettingAndStatus(ctx context.Context, s entities.SpotWorkerStatus) error {
-	w.setting.store(s)
-	w.stt.updateTotalUnitBought(int64(s.TotalUnitBought))
+func (w *spotWorker) SetWorkerSettingAndStatus(ctx context.Context, status entities.SpotWorkerStatus) error {
+	logger.Infof(ctx, "[SetWorkerSettingAndStatus] status: %+v", status)
+
+	w.setting.store(status)
+	w.stt.updateTotalUnitBought(int64(status.TotalUnitBought))
 	return nil
 }
 
