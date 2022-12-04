@@ -2,6 +2,7 @@ package spotmanager
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -50,21 +51,49 @@ func (m *spotManager) updateExchangeInfo(ctx context.Context) error {
 		for _, f := range s.Filters {
 			switch f["filterType"].(string) {
 			case "PRICE_FILTER":
-				tickSize := f["tickSize"].(string)
+				tickSize, ok := f["tickSize"].(string)
+				if !ok {
+					err := fmt.Errorf("[updateExchangeInfo] tickSize: can not cast to string")
+					logger.Error(ctx, err)
+					return err
+				}
 				pricePrecision, err = maths.GetPrecision(tickSize)
 				if err != nil {
 					logger.Error(ctx, err)
 					return err
 				}
 			case "LOT_SIZE":
-				stepSize := f["stepSize"].(string)
+				stepSize, ok := f["stepSize"].(string)
+				if !ok {
+					err := fmt.Errorf("[updateExchangeInfo] stepSize: can not cast to string")
+					logger.Error(ctx, err)
+					return err
+				}
 				qtyPrecision, err = maths.GetPrecision(stepSize)
 				if err != nil {
 					logger.Error(ctx, err)
 					return err
 				}
+
+				minQtyStr, ok := f["minQty"].(string)
+				if !ok {
+					err := fmt.Errorf("[updateExchangeInfo] minQty: can not cast to string")
+					logger.Error(ctx, err)
+					return err
+				}
+				minQty, err = strconv.ParseFloat(minQtyStr, 64)
+				if err != nil {
+					logger.Error(ctx, err)
+					return err
+				}
 			case "MIN_NOTIONAL":
-				minNotional, err = strconv.ParseFloat(f["minNotional"].(string), 64)
+				minNotionalStr, ok := f["minNotional"].(string)
+				if !ok {
+					err := fmt.Errorf("[updateExchangeInfo] minNotional: can not cast to string")
+					logger.Error(ctx, err)
+					return err
+				}
+				minNotional, err = strconv.ParseFloat(minNotionalStr, 64)
 				if err != nil {
 					logger.Error(ctx, err)
 					return err

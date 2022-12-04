@@ -139,7 +139,9 @@ func updateSymbolListCommand() *cli.Command {
 				return errors.New("can not read config file")
 			}
 
-			components.InitSymlistUpdaterComponents()
+			if err := components.InitSymlistUpdaterComponents(); err != nil {
+				return err
+			}
 
 			updater := builder.NewSymlistUpdater()
 
@@ -188,7 +190,9 @@ func calcWavetrendMomentumCommand() *cli.Command {
 				return err
 			}
 
-			components.InitWavetrendCalculatorComponents(ctx.Bool(testFlag))
+			if err := components.InitWavetrendCalculatorComponents(ctx.Bool(testFlag)); err != nil {
+				return err
+			}
 
 			calculator := builder.NewWaveTrendCalculator(
 				services.WaveTrendMomentumServiceInstance(),
