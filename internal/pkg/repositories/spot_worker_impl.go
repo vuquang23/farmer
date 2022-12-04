@@ -43,7 +43,7 @@ func (r *spotWorkerRepository) GetAllWorkerStatus(ctx context.Context) ([]*entit
 	query := r.db.Table("spot_trades").Select("spot_worker_id, unit_bought").
 		Where("side = ? AND is_done = ?", "BUY", false)
 
-	err := r.db.Table("spot_workers").Select("spot_workers.id, spot_workers.symbol", "spot_workers.unit_buy_allowed", "spot_workers.unit_notional", "SUM(q.unit_bought) AS total_unit_bought").
+	err := r.db.Table("spot_workers").Select("spot_workers.id, spot_workers.symbol", "spot_workers.unit_buy_allowed", "spot_workers.unit_notional", "spot_workers.capital", "SUM(q.unit_bought) AS total_unit_bought").
 		Joins("LEFT JOIN (?) q ON q.spot_worker_id = spot_workers.id", query).Group("spot_workers.id").Find(&ret).Error
 	if err != nil {
 		logger.Error(ctx, err)
