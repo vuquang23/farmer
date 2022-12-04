@@ -12,7 +12,7 @@ import (
 )
 
 func CreateSpotBuyOrder(ctx context.Context, client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, *errPkg.DomainError) {
-	logger.Info(ctx, "[CreateSpotBuyOrder] qty: %s | price: %s", qty, price)
+	logger.Infof(ctx, "[CreateSpotBuyOrder] qty: %s | price: %s", qty, price)
 
 	order, err := client.NewCreateOrderService().Symbol(symbol).
 		Side(binance.SideTypeBuy).Type(binance.OrderTypeLimit).
@@ -34,7 +34,7 @@ func CreateSpotBuyOrder(ctx context.Context, client *binance.Client, symbol stri
 }
 
 func CreateSpotSellOrder(ctx context.Context, client *binance.Client, symbol string, qty string, price string) (*binance.CreateOrderResponse, *errPkg.DomainError) {
-	logger.Info(ctx, "[CreateSpotSellOrder] qty: %s | price: %s", qty, price)
+	logger.Infof(ctx, "[CreateSpotSellOrder] qty: %s | price: %s", qty, price)
 
 	order, err := client.NewCreateOrderService().Symbol(symbol).
 		Side(binance.SideTypeSell).Type(binance.OrderTypeLimit).
