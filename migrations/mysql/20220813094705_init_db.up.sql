@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS `spot_trades` (
     id INT PRIMARY KEY AUTO_INCREMENT,
     symbol VARCHAR(16) NOT NULL,
     side VARCHAR(8) NOT NULL,
-    binance_order_id INT NOT NULL,
+    binance_order_id BIGINT NOT NULL,
     spot_worker_id INT NOT NULL,
     qty VARCHAR(64) NOT NULL,
     cummulative_quote_qty VARCHAR(64) NOT NULL,
