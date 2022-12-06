@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS `history_spot_trades` (
     id INT PRIMARY KEY,
     symbol VARCHAR(16) NOT NULL,
     side VARCHAR(8) NOT NULL,
-    binance_order_id INT NOT NULL,
+    binance_order_id BIGINT NOT NULL,
     qty VARCHAR(64) NOT NULL,
     cummulative_quote_qty VARCHAR(64) NOT NULL,
     price FLOAT NOT NULL,
