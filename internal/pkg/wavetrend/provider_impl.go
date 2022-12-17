@@ -170,6 +170,9 @@ func (p *wavetrendProvider) SetStopSignal(ctx goctx.Context, svcName string) {
 		// unscribe to ws
 		stopConnC := p.mapSymbolStopWsChan[svcName]
 		stopConnC <- struct{}{}
+
+		delete(p.mapSymbolWorker, svcName)
+		delete(p.mapSymbolStopWsChan, svcName)
 	}
 }
 
