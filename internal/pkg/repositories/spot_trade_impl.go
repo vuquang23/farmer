@@ -140,10 +140,12 @@ func (r *spotTradeRepository) ArchiveTradingData(ctx context.Context, symbol str
 		for idx, t := range spotTrades {
 			historySpotTrades[idx] = entities.NewHistorySpotTrade(t)
 		}
-		err = tx.Create(historySpotTrades).Error
-		if err != nil {
-			logger.Error(ctx, err)
-			return pkgErr.NewInfraErrorDBInsert(err)
+		if len(historySpotTrades) > 0 {
+			err = tx.Create(historySpotTrades).Error
+			if err != nil {
+				logger.Error(ctx, err)
+				return pkgErr.NewInfraErrorDBInsert(err)
+			}
 		}
 
 		err = tx.Where("symbol = ?", symbol).Delete(&entities.SpotTrade{}).Error
