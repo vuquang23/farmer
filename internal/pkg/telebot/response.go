@@ -8,8 +8,8 @@ type (
 		CurrentUSDValue float64
 		BenefitUSD      float64
 		ChangedUSD      float64
-		BaseQty         float64
-		QuoteQty        float64
+		BaseQty         float64 // base asset current balance.
+		QuoteQty        float64 // quote asset current balance.
 		UnitBuyAllowed  uint64
 		UnitNotional    float64
 		TotalUnitBought uint64
