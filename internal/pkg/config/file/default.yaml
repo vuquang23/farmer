@@ -14,6 +14,7 @@ db:
   LogLevel: 1
 common:
   LogLevel: -1 #debug
+  AdminTeleID:
 telebot:
   Token:
   GroupID:

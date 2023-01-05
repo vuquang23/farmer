@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	tb "gopkg.in/telebot.v3"
+
+	"farmer/internal/pkg/config"
 )
 
 const (
@@ -32,11 +34,16 @@ func (t *teleBot) setupRoute() {
 	t.m[GetWavetrendDataCmd] = t.getWavetrendData
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
+		if c.Sender().ID != config.Instance().Common.AdminTeleID {
+			c.Send("unauthorized! 🖕")
+			return nil
+		}
+
 		args := strings.Fields(c.Text())
 		cmd := args[0]
 		handler, ok := t.m[cmd]
 		if !ok {
-			msg := "not found"
+			msg := "not found 😊"
 			c.Send(msg)
 			return nil
 		}
