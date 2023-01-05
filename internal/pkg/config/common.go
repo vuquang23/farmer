@@ -1,6 +1,7 @@
 package config
 
-//CommonConfig contains all common configuration of application
+// CommonConfig contains all common configuration of application
 type CommonConfig struct {
-	LogLevel int `default:"0"`
+	LogLevel    int `default:"0"`
+	AdminTeleID int64
 }

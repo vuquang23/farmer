@@ -30,3 +30,21 @@ go run cmd/main.go symlist
 ```shell
 go run cmd/main.go wtmomentum --symlist=./files/bought.txt
 ```
+
+## Tele commands
+```
+get!/spot/account-info
+
+get!/spot/health
+
+post!/spot {"Symbol":"ETHUSDT","UnitBuyAllowed":12,"UnitNotional":50}
+
+post!/spot/add-capital {"Symbol":"ETHUSDT","Capital":600}
+
+post!/spot/stop {"Symbol":"ETHUSDT"}
+
+post!/spot/archive-data {"Symbol":"ETHUSDT"}
+
+get!/wavetrend-data ethusdt 1m|1h
+
+```
