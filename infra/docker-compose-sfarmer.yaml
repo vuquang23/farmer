@@ -17,6 +17,7 @@ services:
       - BINANCE_APIKEY=
       - BINANCE_SECRETKEY=
       - TELEBOT_TOKEN=
+      - COMMON_ADMINTELEID=
     volumes:
       - ./volumes/log:/app/log
     networks:
