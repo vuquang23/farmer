@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS `spot_workers` (
     symbol VARCHAR(16) NOT NULL,
     unit_buy_allowed INT NOT NULL,
     unit_notional FLOAT NOT NULL,
-    capital FLOAT NOT NULL
+    capital FLOAT NOT NULL,
+    UNIQUE (symbol)
 );
 
 CREATE TABLE IF NOT EXISTS `spot_trades` (
