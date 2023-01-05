@@ -3,6 +3,7 @@ package spotworker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -234,20 +235,27 @@ func (w *spotWorker) afterSell(ctx context.Context, res []*en.CreateSpotSellOrde
 
 	for _, r := range res {
 		updateUnitBought += int(r.Order.UnitBought)
+
+		// commission is collected in quote asset.
+		quoteQty := maths.StrToFloat(r.BinanceResponse.CummulativeQuoteQuantity)
+		for _, fill := range r.BinanceResponse.Fills {
+			quoteQty -= maths.StrToFloat(fill.Commission)
+		}
+
 		sellTrades = append(sellTrades, &en.SpotTrade{
-			Symbol:              w.setting.symbol,
-			Side:                "SELL",
-			BinanceOrderID:      uint64(r.BinanceResponse.OrderID),
-			SpotWorkerID:        w.ID,
-			Qty:                 r.BinanceResponse.ExecutedQuantity,
-			CummulativeQuoteQty: r.BinanceResponse.CummulativeQuoteQuantity,
-			Price:               maths.StrToFloat(r.BinanceResponse.Price),
-			Ref:                 r.Order.Ref.ID,
-			IsDone:              true,
-			UnitBought:          r.Order.UnitBought,
+			Symbol:         w.setting.symbol,
+			Side:           "SELL",
+			BinanceOrderID: uint64(r.BinanceResponse.OrderID),
+			SpotWorkerID:   w.ID,
+			Qty:            r.BinanceResponse.ExecutedQuantity,
+			QuoteQty:       fmt.Sprint(quoteQty),
+			Price:          maths.StrToFloat(r.BinanceResponse.Price),
+			Ref:            r.Order.Ref.ID,
+			IsDone:         true,
+			UnitBought:     r.Order.UnitBought,
 		})
 
-		benefitQuote += maths.StrToFloat(r.BinanceResponse.CummulativeQuoteQuantity) - maths.StrToFloat(r.Order.Ref.CummulativeQuoteQty)
+		benefitQuote += quoteQty - maths.StrToFloat(r.Order.Ref.QuoteQty)
 	}
 
 	w.stt.updateTotalUnitBought(-int64(updateUnitBought))
@@ -417,6 +425,25 @@ func (w *spotWorker) afterBuy(ctx context.Context, res *binance.CreateOrderRespo
 	w.stt.updateTotalUnitBought(unitBought)
 	w.stt.storeLastBoughtAt(time.Now())
 
+	// trade
+	/// commission is collected in base asset.
+	qty := maths.StrToFloat(res.ExecutedQuantity)
+	for _, fill := range res.Fills {
+		qty -= maths.StrToFloat(fill.Commission)
+	}
+	spotTrade := en.SpotTrade{
+		Symbol:         w.setting.symbol,
+		Side:           "BUY",
+		BinanceOrderID: uint64(res.OrderID),
+		SpotWorkerID:   w.ID,
+		Qty:            fmt.Sprint(qty),
+		QuoteQty:       res.CummulativeQuoteQuantity,
+		Price:          maths.StrToFloat(res.Price),
+		IsDone:         false,
+		UnitBought:     uint64(unitBought),
+	}
+
+	// persist to DB
 	tried := 0
 	backoff := retry.NewConstant(50 * time.Millisecond)
 	_ = retry.Do(ctx, retry.WithMaxRetries(3, backoff), func(ctx context.Context) error {
@@ -427,17 +454,7 @@ func (w *spotWorker) afterBuy(ctx context.Context, res *binance.CreateOrderRespo
 			logger.Infof(ctx, "[afterBuy] retry %d...", tried)
 		}
 
-		err := w.spotTradeRepo.CreateBuyOrder(ctx, en.SpotTrade{
-			Symbol:              w.setting.symbol,
-			Side:                "BUY",
-			BinanceOrderID:      uint64(res.OrderID),
-			SpotWorkerID:        w.ID,
-			Qty:                 res.ExecutedQuantity,
-			CummulativeQuoteQty: res.CummulativeQuoteQuantity,
-			Price:               maths.StrToFloat(res.Price),
-			IsDone:              false,
-			UnitBought:          uint64(unitBought),
-		})
+		err := w.spotTradeRepo.CreateBuyOrder(ctx, spotTrade)
 		if err != nil {
 			logger.Error(ctx, err)
 			return retry.RetryableError(err)
