@@ -63,15 +63,15 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 		if infraErr != nil {
 			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 		}
-		info.BaseQty = aggregated.TotalBaseQty
+		info.BaseAmount = aggregated.TotalBaseQty
 		info.TotalUnitBought = aggregated.TotalUnitBought
 
-		info.QuoteQty = info.Capital + info.BenefitUSD - aggregated.TotalQuoteQty
+		info.QuoteAmount = info.Capital + info.BenefitUSD - aggregated.TotalQuoteQty
 		price, domainErr := b.GetSpotPrice(ctx, s.bclient, w.Symbol)
 		if domainErr != nil {
 			return nil, domainErr
 		}
-		info.CurrentUSDValue = info.QuoteQty + info.BaseQty*price
+		info.CurrentUSDValue = info.QuoteAmount + info.BaseAmount*price
 
 		ret = append(ret, info)
 	}
