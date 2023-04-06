@@ -35,7 +35,7 @@ func (t *teleBot) setupRoute() {
 
 	t.bot.Handle(tb.OnText, func(c tb.Context) error {
 		if c.Sender().ID != config.Instance().Common.AdminTeleID {
-			c.Send("unauthorized! 🖕")
+			c.Send("unauthorized 👾")
 			return nil
 		}
 
@@ -43,7 +43,7 @@ func (t *teleBot) setupRoute() {
 		cmd := args[0]
 		handler, ok := t.m[cmd]
 		if !ok {
-			msg := "not found 😊"
+			msg := "not found 🤖"
 			c.Send(msg)
 			return nil
 		}
