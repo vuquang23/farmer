@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS `spot_workers` (
     symbol VARCHAR(16) NOT NULL,
     unit_buy_allowed INT NOT NULL,
     unit_notional FLOAT NOT NULL,
-    capital FLOAT NOT NULL
+    capital FLOAT NOT NULL,
+    UNIQUE (symbol)
 );
 
 CREATE TABLE IF NOT EXISTS `spot_trades` (
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `spot_trades` (
     binance_order_id BIGINT NOT NULL,
     spot_worker_id INT NOT NULL,
     qty VARCHAR(64) NOT NULL,
-    cummulative_quote_qty VARCHAR(64) NOT NULL,
+    quote_qty VARCHAR(64) NOT NULL,
     price FLOAT NOT NULL,
     ref INT,
     is_done BOOLEAN NOT NULL,
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS `history_spot_trades` (
     side VARCHAR(8) NOT NULL,
     binance_order_id BIGINT NOT NULL,
     qty VARCHAR(64) NOT NULL,
-    cummulative_quote_qty VARCHAR(64) NOT NULL,
+    quote_qty VARCHAR(64) NOT NULL,
     price FLOAT NOT NULL,
     ref INT,
     unit_bought INT NOT NULL,

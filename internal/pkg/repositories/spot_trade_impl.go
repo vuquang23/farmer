@@ -101,7 +101,7 @@ func (r *spotTradeRepository) GetTotalQuoteBenefit(workerID uint64) (float64, *p
 
 	querySell := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ?", workerID, "SELL")
 	err := r.db.Table("spot_trades").Joins("JOIN (?) querySell ON querySell.ref = spot_trades.id", querySell).Group("spot_trades.spot_worker_id").
-		Select("SUM(querySell.cummulative_quote_qty - spot_trades.cummulative_quote_qty) as total_quote_benefit").Find(&ret).Error
+		Select("SUM(querySell.quote_qty - spot_trades.quote_qty) as total_quote_benefit").Find(&ret).Error
 	if err != nil {
 		return 0, pkgErr.NewInfraErrorDBSelect(err)
 	}
@@ -115,8 +115,8 @@ func (r *spotTradeRepository) GetAggregatedNotSoldBuyOrders(ctx context.Context,
 	err := r.db.Table("spot_trades").Where("spot_worker_id = ? AND side = ? AND is_done = ?", workerID, "BUY", false).
 		Group("spot_worker_id").
 		Select(`
-			SUM(qty) as total_base_amount, 
-			SUM(cummulative_quote_qty) as total_cummulative_quote_qty, 
+			SUM(qty) as total_base_qty, 
+			SUM(quote_qty) as total_quote_qty, 
 			SUM(unit_bought) as total_unit_bought
 		`).
 		Find(&ret).Error
@@ -140,10 +140,12 @@ func (r *spotTradeRepository) ArchiveTradingData(ctx context.Context, symbol str
 		for idx, t := range spotTrades {
 			historySpotTrades[idx] = entities.NewHistorySpotTrade(t)
 		}
-		err = tx.Create(historySpotTrades).Error
-		if err != nil {
-			logger.Error(ctx, err)
-			return pkgErr.NewInfraErrorDBInsert(err)
+		if len(historySpotTrades) > 0 {
+			err = tx.Create(historySpotTrades).Error
+			if err != nil {
+				logger.Error(ctx, err)
+				return pkgErr.NewInfraErrorDBInsert(err)
+			}
 		}
 
 		err = tx.Where("symbol = ?", symbol).Delete(&entities.SpotTrade{}).Error

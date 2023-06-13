@@ -1,7 +1,7 @@
 package entities
 
 type AggregatedBuyOrders struct {
-	TotalBaseAmount          float64
-	TotalCummulativeQuoteQty float64
-	TotalUnitBought          uint64
+	TotalBaseQty    float64
+	TotalQuoteQty   float64 // total quote asset qty used to buy base asset.
+	TotalUnitBought uint64
 }

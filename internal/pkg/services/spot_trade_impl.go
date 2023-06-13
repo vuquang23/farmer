@@ -6,7 +6,6 @@ import (
 	"github.com/adshao/go-binance/v2"
 
 	b "farmer/internal/pkg/binance"
-	"farmer/internal/pkg/entities"
 	en "farmer/internal/pkg/entities"
 	"farmer/internal/pkg/repositories"
 	pkgErr "farmer/pkg/errors"
@@ -64,10 +63,10 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 		if infraErr != nil {
 			return nil, pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
 		}
-		info.BaseAmount = aggregated.TotalBaseAmount
+		info.BaseAmount = aggregated.TotalBaseQty
 		info.TotalUnitBought = aggregated.TotalUnitBought
 
-		info.QuoteAmount = info.Capital + info.BenefitUSD - aggregated.TotalCummulativeQuoteQty
+		info.QuoteAmount = info.Capital + info.BenefitUSD - aggregated.TotalQuoteQty
 		price, domainErr := b.GetSpotPrice(ctx, s.bclient, w.Symbol)
 		if domainErr != nil {
 			return nil, domainErr
@@ -80,7 +79,7 @@ func (s *spotTradeService) GetTradingPairsInfo(ctx context.Context) ([]*en.SpotT
 	return ret, nil
 }
 
-func (s *spotTradeService) ArchiveTradingData(ctx context.Context, params *entities.ArchiveSpotTradingDataParams) *pkgErr.DomainError {
+func (s *spotTradeService) ArchiveTradingData(ctx context.Context, params *en.ArchiveSpotTradingDataParams) *pkgErr.DomainError {
 	infraErr := s.spotTradeRepo.ArchiveTradingData(ctx, params.Symbol)
 	if infraErr != nil {
 		return pkgErr.DomainTransformerInstance().InfraErrToDomainErr(infraErr)
